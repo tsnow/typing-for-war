@@ -7,6 +7,18 @@ import (
 )
 
 func main() {
+/* Blood and destruction shall be so in use 
+And dreadful objects so familiar 
+That mothers shall but smile when they behold 
+Their infants quarter'd with the hands of war; 
+All pity choked with custom of fell deeds: 
+And Caesar's spirit, ranging for revenge, 
+With Ate by his side come hot from hell, 
+Shall in these confines with a monarch's voice 
+Cry 'Havoc,' and let slip the dogs of war; 
+That this foul deed shall smell above the earth 
+With carrion men, groaning for burial. */
+
 	http.HandleFunc("/", hello)
 	fmt.Println("listening...")
 	err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
