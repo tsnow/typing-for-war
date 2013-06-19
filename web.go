@@ -22,6 +22,9 @@ That this foul deed shall smell above the earth
 With carrion men, groaning for burial. */
 
 	http.HandleFunc("/", hello)
+	http.Handle("/files", http.FileServer(http.Dir("/tmp")))
+
+	template.New("things")
 	fmt.Println("listening...")
 	err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	if err != nil {
@@ -30,5 +33,5 @@ With carrion men, groaning for burial. */
 }
 
 func hello(res http.ResponseWriter, req *http.Request) {
-	fmt.Fprintln(res, "hello, world")
+	fmt.Fprintln(res, os.Environ())
 }
