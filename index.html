@@ -34,12 +34,14 @@ function message(msg){
 $('#chatLog').append(msg+'</p>');
 }
 
+var socket;
+var host = "ws://typing-for-war.herokuapp.com/socket/server";
+
+
 function connect(){
     try{
 
-var socket;
-var host = "ws://typing-for-war.herokuapp.com/socket/server";
-    var socket = new WebSocket(host);
+    socket = new WebSocket(host);
 
         message('<p class="event">Socket Status: '+socket.readyState);
 
