@@ -56,6 +56,9 @@ function connect(){
         socket.onclose = function(){
      message('<p class="event">Socket Status: '+socket.readyState+'(Closed)');
     }
+        socket.onerror = function(e){
+     message('<p class="event">Socket Status: '+socket.readyState+'(Error):' + e);
+    }
 
     } catch(exception){
      message('<p>Error'+exception);
