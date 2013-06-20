@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-
+	ws "code.google.com/p/go.net/websocket"
 	"html/template"
 )
 
@@ -25,7 +25,12 @@ With carrion men, groaning for burial. */
 		http.ServeFile(res,req,"/app/index.html")
 	})
 	http.Handle("/files", http.FileServer(http.Dir(os.Getenv("PWD"))))
-
+	http.Handle("/socket/server", ws.Handler(func(sock *ws.Conn){
+		var message string
+		ws.Message.Receive(sock, &message);
+		ws.Message.Send(sock,message);
+		sock.Close();
+	}))
 	template.New("things")
 	fmt.Println("listening...")
 	err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
@@ -34,6 +39,3 @@ With carrion men, groaning for burial. */
 	}
 }
 
-func hello(res http.ResponseWriter, req *http.Request) {
-	fmt.Fprintln(res, os.Environ())
-}
