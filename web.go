@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+
 	ws "code.google.com/p/go.net/websocket"
+	"log"
+
 	"html/template"
 )
 
@@ -26,10 +29,17 @@ With carrion men, groaning for burial. */
 	})
 	http.Handle("/files", http.FileServer(http.Dir(os.Getenv("PWD"))))
 	http.Handle("/socket/server", ws.Handler(func(sock *ws.Conn){
+		log.Print("- ", sock.RemoteAddr(), " connected")
 		var message string
-		ws.Message.Receive(sock, &message);
-		ws.Message.Send(sock,message);
-		sock.Close();
+		if ws.Message.Receive(sock, &message) != nil {
+			log.Print("- ", sock.RemoteAddr(), " couldn't receive.")
+		}
+
+		if ws.Message.Send(sock,message) != nil {
+			log.Print("- ", sock.RemoteAddr(), " couldn't send.")
+		}
+		sock.Close()
+		log.Print("- ", sock.RemoteAddr(), " disconnected")
 	}))
 	template.New("things")
 	fmt.Println("listening...")
