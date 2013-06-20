@@ -22,7 +22,7 @@ That this foul deed shall smell above the earth
 With carrion men, groaning for burial. */
 
 	http.HandleFunc("/", hello)
-	http.Handle("/files", http.FileServer(http.Dir("/tmp")))
+	http.Handle("/files", http.FileServer(http.Dir("/app")))
 
 	template.New("things")
 	fmt.Println("listening...")
