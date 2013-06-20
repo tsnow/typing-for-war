@@ -21,8 +21,10 @@ Cry 'Havoc,' and let slip the dogs of war;
 That this foul deed shall smell above the earth 
 With carrion men, groaning for burial. */
 
-	http.HandleFunc("/", hello)
-	http.Handle("/files", http.FileServer(http.Dir("/app")))
+	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
+		http.ServeFile(res,req,"/app/index.html")
+	})
+	http.Handle("/files", http.FileServer(http.Dir(os.Getenv("PWD"))))
 
 	template.New("things")
 	fmt.Println("listening...")
