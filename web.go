@@ -145,6 +145,26 @@ With carrion men, groaning for burial. */
 		log.Print("- ", sock.RemoteAddr(), " disconnected")
 	}))
 
+	var multi_echo_cons []*ws.Conn
+
+	http.Handle("/socket/multi_echo", ws.Handler(func(sock *ws.Conn){
+	    multi_echo_cons = append(multi_echo_cons,sock)
+		log.Print("- game ", sock.RemoteAddr(), " connected")
+		var message string
+		if ws.Message.Receive(sock, &message) != nil {
+			log.Print("- game ", sock.RemoteAddr(), " couldn't receive.")
+		}
+		for _,conn := range multi_echo_cons {
+			if ws.Message.Send(conn,message) != nil {
+				log.Print("- game ", conn.RemoteAddr(), " couldn't send.")
+			}
+			conn.Close()
+			log.Print("- game ", conn.RemoteAddr(), " disconnected")
+
+		}
+		multi_echo_cons = nil
+	}))
+
 	// disconnectOnError(current_game)
 
 	http.Handle("/socket/new_game", ws.Handler(func(sock *ws.Conn){
