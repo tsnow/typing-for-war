@@ -20,6 +20,7 @@ import (
     func (this *GameList) Connect(conn *ws.Conn) *Game {
     	// if waiting is empty, create a new waiting game
     	// if waiting has any, FIFO complete game
+    	log.Print("- game connect:", this)
     	if this.waiting == nil {
     		game := New()
     		game.Connect(conn)
@@ -88,7 +89,7 @@ import (
 
 	}
 
-	var games *GameList
+	var games GameList
 	// OO DONE 
 /*
 	type game struct {
