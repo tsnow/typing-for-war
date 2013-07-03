@@ -30,74 +30,71 @@ color:#CCC;
 <script type="application/javascript">
 $(document).ready(function(){
 
-function message(msg){
-$('#chatLog').append(msg+'</p>');
-}
-
-var socket;
-var host = "ws://phaedo.local:5002/socket/new_game"; // var host = "ws://localhost:5002/socket/echo"; 
-
-
-function connect(){
+  function message(msg){
+    $('#chatLog').append(msg+'</p>');
+  }
+  
+  var socket;
+  var host = "ws://phaedo.local:5002/socket/new_game"; // var host = "ws://localhost:5002/socket/echo"; 
+  function logSocket(websocket, name){
     try{
-
-    socket = new WebSocket(host);
-
-        message('<p class="event">Socket Status: '+socket.readyState);
-
-        socket.onopen = function(){
-     message('<p class="event">Socket Status: '+socket.readyState+'(open)');
-        }
-
-        socket.onmessage = function(msg){
-     message('<p class="message">Received: '+msg.data);
-        }
-
-        socket.onclose = function(){
-     message('<p class="event">Socket Status: '+socket.readyState+'(Closed)');
-    }
-        socket.onerror = function(e){
-     message('<p class="event">Socket Status: '+socket.readyState+'(Error):' + e);
-    }
-
+      
+      message('<p class="event"> ' + name + ' Socket Status: '+websocket.readyState);
+      
+      websocket.onopen = function(){
+        message('<p class="event"> ' + name + ' Socket Status: '+webwebsocket.readyState+'(open)');
+      }
+      
+      websocket.onmessage = function(msg){
+        message('<p class="message"> ' + name + ' Received: '+msg.data);
+      }
+      
+      websocket.onclose = function(){
+        message('<p class="event"> ' + name + ' Socket Status: '+websocket.readyState+'(Closed)');
+      }
+      websocket.onerror = function(e){
+        message('<p class="event"> ' + name + ' Socket Status: '+websocket.readyState+'(Error):' + e);
+      }
+      
     } catch(exception){
-     message('<p>Error'+exception);
+      message('<p> ' + name + ' Error'+exception);
     }
-}
-connect();
 
+  }
 
-function send(){
-
+  function connect(){
+    try{
+      
+      socket = new WebSocket(host);
+      
+      logSocket(socket,"NewGame");
+      
+        }
+    } catch(exception){
+      message('<p>Error'+exception);
+    }
+  }
+  connect();
+  
+  
+  function send(){
+    
     var text = $('#text').val();
     if(text==""){
-        message('<p class="warning">Please enter a message');
-        return ;
+      message('<p class="warning">Please enter a message');
+      return ;
     }
     try{
-        socket.send(text);
-        message('<p class="event">Sent: '+text)
+      socket.send(text);
+      message('<p class="event">Sent: '+text)
     } catch(exception){
-  message('<p class="warning"> Error:' + exception);
+      message('<p class="warning"> Error:' + exception);
     }
-
-    $('#text').val("");
-
-}
-
-$('#text').keypress(function(event) {
-    if (event.keyCode == '13') {
-  send();
-    }
+  
+  $('#disconnect').click(function(){
+    socket.close();
+  });
 });
-
-$('#disconnect').click(function(){
-  socket.close();
-});
-
-
-
-})
 </script>
 <title>WebSockets Client</title>
 
