@@ -35,14 +35,14 @@ $(document).ready(function(){
   }
   
   var socket;
-  var host = "ws://phaedo.local:5002/socket/new_game"; // var host = "ws://localhost:5002/socket/echo"; 
+  var host = "ws://typing-for-war.herokuapp.com/socket/new_game"; // "ws://phaedo.local:5002/socket/new_game"; // var host = "ws://localhost:5002/socket/echo"; 
   function logSocket(websocket, name){
     try{
       
       message('<p class="event"> ' + name + ' Socket Status: '+websocket.readyState);
       
       websocket.onopen = function(){
-        message('<p class="event"> ' + name + ' Socket Status: '+webwebsocket.readyState+'(open)');
+        message('<p class="event"> ' + name + ' Socket Status: '+websocket.readyState+'(open)');
       }
       
       websocket.onmessage = function(msg){
@@ -68,8 +68,7 @@ $(document).ready(function(){
       socket = new WebSocket(host);
       
       logSocket(socket,"NewGame");
-      
-        }
+
     } catch(exception){
       message('<p>Error'+exception);
     }
@@ -90,6 +89,7 @@ $(document).ready(function(){
     } catch(exception){
       message('<p class="warning"> Error:' + exception);
     }
+  }
   
   $('#disconnect').click(function(){
     socket.close();
@@ -111,6 +111,7 @@ $(document).ready(function(){
         </div><!-- #chatLog -->
         <p id="examples">e.g. try 'hi', 'name', 'age', 'today'</p>
 
+        <label for="text">Game:</label>
         <input id="text" type="text" />
         <button id="disconnect">Disconnect</button>
 
