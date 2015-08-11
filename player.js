@@ -30,11 +30,6 @@ $(document).ready(function(){
 		}
 		
 		that.websocket.onmessage = function(msg){
-		    var decoded = JSON.parse(msg.data);
-		    if(decoded[0] === "down"){
-			that.tickerData=that.tickerData+decoded[2]+decoded[3];
-			that.ticker();
-		    }
 		    that.message('<p class="message"> ' + that.name + ' Received: '+msg.data);
 		}
 		
@@ -56,6 +51,12 @@ $(document).ready(function(){
 		return function(key){
 		    key.preventDefault();
 		    // var text = that.container.find('#text').val();
+		    if(n === "down"){
+			var keypressed = key.keyCode <= 64 ? "^"+String.fromCharCode(key.keyCode + 64) : String.fromCharCode(key.keyCode)
+			that.tickerData=that.tickerData+keypressed;
+			that.ticker();
+		    }
+
 		    that.send(JSON.stringify([
 			n,
 			key.keyCode,
