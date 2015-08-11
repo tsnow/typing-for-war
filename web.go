@@ -10,181 +10,258 @@ import (
 
 	"html/template"
 )
+type Octagon struct {
+	first      *ws.Conn
+	last       *ws.Conn
+	disconnect chan struct{}
+}
 
-    // OO UP IN THIS BITCH
-    type GameList struct {
-    	active []*Game
-    	waiting *Game
-    }
-
-    func (this *GameList) Connect(conn *ws.Conn) *Game {
-    	// if waiting is empty, create a new waiting game
-    	// if waiting has any, FIFO complete game
-    	log.Print("- game connect:", this)
-    	if this.waiting == nil {
-    		game := New()
-    		game.Connect(conn)
-    		this.waiting = game
-    	} else {
-    		this.waiting.Connect(conn)
-    		this.active = append(this.active,this.waiting)
-    		this.waiting.Broadcast("A game done did begunnned.")
-    		return this.waiting
-    		//this.waiting = nil
-    	}
-    	return this.waiting
-    }
-
-	type Game struct {
-		first *ws.Conn
-		last *ws.Conn
-		disconnect chan bool
-	}
-
-	func New() (game *Game) {
-		game = new(Game)
-		game.disconnect = make(chan bool)
-		go func(){
-			for {
-				select {
-					case disconnect := <- game.disconnect:
-						if disconnect {
-							game.first.Close()
-							game.last.Close()
-							log.Print("- game ", game.first.RemoteAddr(), "<->",game.last.RemoteAddr(), " disconnected")
-						}
-				}
-			}
-		}()
-		return
-	}
-	func (this *Game) Clone() (game *Game){
-		game.first = this.first
-		game.last = this.last
-		game.disconnect = this.disconnect
-		return
-	}
-
-	func (this *Game) Connect(conn *ws.Conn) {
-		if this.first != nil {
-			log.Print("- game last ", conn.RemoteAddr(), " connected")
-			this.last = conn
-		} else {
-			log.Print("- game first ", conn.RemoteAddr(), " connected")
-			this.first = conn
-		}
-	}
-
-	func (this *Game) Disconnect() {
-		this.disconnect <- true
-	}
-
-	func (this *Game) Broadcast (message string) {
-		if ws.Message.Send(this.first,message) != nil {
-			this.Disconnect()
-		}
-		if ws.Message.Send(this.last, message) != nil {
-			this.Disconnect()
-		}
-
-	}
-
-	var games GameList
-	// OO DONE 
-/*
-	type game struct {
-		conns []*ws.Conn
-		disconnect chan bool
-	}
-	var	current_game = &game{disconnect: make(chan bool)}
-	func disconnectOnError(current_game *game) {
-	go func(){
+func NewOctagon() *Octagon {
+	game := new(Octagon)
+	game.disconnect = make(chan struct{})
+	go func() {
 		for {
 			select {
-				case disconnect := <- current_game.disconnect:
-					if disconnect {
-						for _,conn := range current_game.conns {
-							conn.Close()
-							log.Print("- game ", conn.RemoteAddr(), " disconnected")
-						}
-						current_game.conns = nil
-					}
+			case <-game.disconnect:
+				game.first.Close()
+				game.last.Close()
+				log.Printf("- game %s <-> %s disconnected", 
+					game.first.RemoteAddr(), 
+					game.last.RemoteAddr(), 
+				)
+
 			}
 		}
 	}()
+	return game
+}
+
+func (g *Octagon) Clone() *Octagon {
+	game := &Octagon{}
+	game.first = g.first
+	game.last = g.last
+	game.disconnect = g.disconnect
+	return game
+}
+
+func (g *Octagon) Connect(conn *ws.Conn) {
+	if g.first != nil {
+		log.Printf("- game last %s connected", conn.RemoteAddr())
+		g.last = conn
+	} else {
+		log.Print("- game first %s connected", conn.RemoteAddr())
+		g.first = conn
 	}
-*/
+}
+
+func (g *Octagon) Disconnect() {
+	var a struct{}
+	g.disconnect <- a
+}
+
+func (g *Octagon) Broadcast(message string) {
+	if ws.Message.Send(g.first, message) != nil {
+		g.Disconnect()
+	}
+	if ws.Message.Send(g.last, message) != nil {
+		g.Disconnect()
+	}
+
+}
+
+
+
+
+type Player struct {
+	conn *ws.Conn
+	v *Valhalla
+	name string
+	password string //default idrinkyourmilkshake
+	disconnect chan struct{}
+}
+
+var nametog int
+func (p *Player) randomName(){
+	if nametog == 0 {
+		p.name = "Buttercup"
+	} else {
+		p.name = "Zelda"
+	}
+	nametog = 1 - nametog
+}
+
+func (p *Player) Receive(){
+	var message string
+	if ws.Message.Receive(p.conn, &message) != nil {
+		var a struct{}
+		p.disconnect <- a
+	}
+	p.Broadcast(message)
+}
+func (p *Player) Broadcast(message string){
+	p.v.Broadcast(message)
+}
+func (p *Player) Listen() {
+	for {
+		select {
+		case <-p.disconnect:
+			return
+		default:
+			p.Receive()
+		}
+	}
+}
+
+func (v *Valhalla) Broadcast(message string){
+	for p, _ := range v.allYall {
+		ws.Message.Send(p.conn, message)
+	}
+}
+// New gives you back a Player so fresh and clean clean, yo.
+func (v *Valhalla) NewPlayer(conn *ws.Conn) *Player {
+	player := &Player{
+		v: v, 
+		conn: conn, 
+		disconnect: make(chan struct{}),
+	}
+	var a struct{}
+	v.allYall[player] = a
+	player.randomName()
+	go func() {
+		player.Listen()
+		player.conn.Close()
+		log.Printf("- player %s %s disconnected.", player.name, player.conn.RemoteAddr())
+		delete(v.allYall, player)
+	}()
+	return player
+}
+
+
+type Valhalla struct {
+	allYall map[*Player]struct{}
+}
+
+// Connect throws new players in the mix, yo!
+func (v *Valhalla) Connect(conn *ws.Conn) *Player {
+	log.Printf("- player connect: %s", conn)
+	p := v.NewPlayer(conn)
+	var a struct{}
+	v.allYall[p] = a
+	v.Broadcast("A new player has joined.")
+	return p
+}
+
+func (v *Valhalla) Disconnect(p *Player){
+	delete(v.allYall, p)
+}
+
+
+// var games GameList
+var valhalla Valhalla
+// store players in file
+// allow players to choose opponents in a lobby
+// open root -autoname> matchmaking -e> game start
+//                                  -nothanks> lobby -chooseopponent> game start
+//                                                   -chatupguests> chatter.
+
+type echolog struct{
+  sock *ws.Conn
+}
+func (e echolog) id() string{
+	return e.sock.Request().RemoteAddr;
+}
+func (e echolog) receiveFail(){
+  log.Printf("- %s couldn't receive.", e.id())
+}
+func (e echolog) connect(){
+  log.Printf("- %s connected", e.id())
+}
+func (e echolog) sendFail(){
+log.Printf("- %s couldn't send.", e.id())
+
+}
+func (e echolog) disconnected(){
+log.Printf("- %s disconnected", e.id())
+}
+func (e echolog) message(msg error){
+	log.Printf("- %s error %s", e.id(), msg);
+}
+
+type multiEcho struct{
+	ws *ws.Conn
+	log echolog
+}
+var multiEchoCons *map[*ws.Conn]*multiEcho;
+
+func createMultiEchoConn(sock *ws.Conn) *multiEcho {
+
+	multi := multiEcho{
+		ws: sock,
+		log: echolog{sock: sock},
+	};
+	return &multi
+}
+func (m *multiEcho) Listen(){
+	m.log.connect()
+	var message string
+	for {
+		err := ws.Message.Receive(m.ws, &message)
+		if err != nil {
+			m.log.message(err)
+			m.log.receiveFail()
+			m.ws.Close()
+			m.log.disconnected()
+			delete(*multiEchoCons, m.ws)
+			break;
+		}
+		for conn, me := range *multiEchoCons {
+			err := ws.Message.Send(me.ws, message)
+			if err != nil {
+				me.log.message(err)
+				me.log.sendFail()
+				me.ws.Close()
+				me.log.disconnected()
+				delete(*multiEchoCons, conn)
+			}
+		}
+	}
+}
 
 func main() {
-/* Blood and destruction shall be so in use 
-And dreadful objects so familiar 
-That mothers shall but smile when they behold 
-Their infants quarter'd with the hands of war; 
-All pity choked with custom of fell deeds: 
-And Caesar's spirit, ranging for revenge, 
-With Ate by his side come hot from hell, 
-Shall in these confines with a monarch's voice 
-Cry 'Havoc,' and let slip the dogs of war; 
-That this foul deed shall smell above the earth 
-With carrion men, groaning for burial. */
-
+	mECons := make(map[*ws.Conn]*multiEcho);
+	multiEchoCons = &mECons
 	http.HandleFunc("/app/index", func(res http.ResponseWriter, req *http.Request) {
-		http.ServeFile(res,req,"/app/index.html") // /app/index.html for heroku
+		http.ServeFile(res, req, "/app/index.html") // /app/index.html for heroku
 	})
-	http.Handle("/", http.FileServer(http.Dir(os.Getenv("PWD")))) 
-	http.Handle("/socket/echo", ws.Handler(func(sock *ws.Conn){
-		log.Print("- ", sock.RemoteAddr(), " connected")
-		var message string
-		if ws.Message.Receive(sock, &message) != nil {
-			log.Print("- ", sock.RemoteAddr(), " couldn't receive.")
-		}
+	http.Handle("/", http.FileServer(http.Dir(os.Getenv("PWD"))))
 
-		if ws.Message.Send(sock,message) != nil {
-			log.Print("- ", sock.RemoteAddr(), " couldn't send.")
-		}
-		sock.Close()
-		log.Print("- ", sock.RemoteAddr(), " disconnected")
+	http.Handle("/socket/multi_echo", ws.Handler(func(sock *ws.Conn) {
+		(*multiEchoCons)[sock] = createMultiEchoConn(sock);
+		(*multiEchoCons)[sock].Listen();
 	}))
 
-	var multi_echo_cons []*ws.Conn
-
-	http.Handle("/socket/multi_echo", ws.Handler(func(sock *ws.Conn){
-	    multi_echo_cons = append(multi_echo_cons,sock)
-		log.Print("- game ", sock.RemoteAddr(), " connected")
+	http.Handle("/socket/new_game", ws.Handler(func(sock *ws.Conn) {
+		player := valhalla.Connect(sock)
+/*		log := echolog{sock: sock}
 		var message string
-		if ws.Message.Receive(sock, &message) != nil {
-			log.Print("- game ", sock.RemoteAddr(), " couldn't receive.")
-		}
-		for _,conn := range multi_echo_cons {
-			if ws.Message.Send(conn,message) != nil {
-				log.Print("- game ", conn.RemoteAddr(), " couldn't send.")
+		go func(){
+			for {
+				if ws.Message.Receive(sock, &message) != nil {
+					log.receiveFail()
+*/					var a struct{}
+
+					player.disconnect <- a
+/*				}
 			}
-			conn.Close()
-			log.Print("- game ", conn.RemoteAddr(), " disconnected")
-
-		}
-		multi_echo_cons = nil
+			player.Broadcast(message)
+		}()
+*/
 	}))
-
-	// disconnectOnError(current_game)
-
-	http.Handle("/socket/new_game", ws.Handler(func(sock *ws.Conn){
-		game :=	 games.Connect(sock)
-
-		var message string
-		if ws.Message.Receive(sock, &message) != nil {
-			log.Print("- game ", sock.RemoteAddr(), " couldn't receive.")
-			game.disconnect <- true
-		}
-		game.Broadcast(message)
-	}))
-
 
 	template.New("things")
-	fmt.Println("listening...")
+        fmt.Println("listening...", os.Getenv("PORT")) // Must be 5002 to work with frontend.
 	err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	if err != nil {
 		panic(err)
 	}
 }
-
