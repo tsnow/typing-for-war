@@ -56,7 +56,13 @@ func TestMultiEchoOneConn(t *testing.T){
 	if _, err := conn.Write(msg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
+	verifyReceive(t,conn,msg)
+	conn.Close()
+}
+
+func verifyReceive(t *testing.T, conn *ws.Conn, msg []byte){
 	var actual_msg = make([]byte, 512)
+	
 	n, err := conn.Read(actual_msg)
 	if err != nil {
 		t.Errorf("Read: %v", err)
@@ -65,6 +71,28 @@ func TestMultiEchoOneConn(t *testing.T){
 	if !bytes.Equal(msg, actual_msg) {
 		t.Errorf("Echo: expected %q got %q", msg, actual_msg)
 	}
-	conn.Close()
+	
+}
+func TestMultiEchoTwoConn(t *testing.T){
+
+	once.Do(startServer)
+	conn1 := createClient(t)
+	if conn1 == nil {
+		return;
+	}
+	conn2 := createClient(t)
+	if conn2 == nil {
+		return;
+	}
+	
+	msg := []byte("hello, world\n")
+	if _, err := conn1.Write(msg); err != nil {
+		t.Errorf("Write: %v", err)
+	}
+	verifyReceive(t,conn1,msg)
+	verifyReceive(t,conn2,msg)
+	
+	conn1.Close()
+	conn2.Close()
 }
 
