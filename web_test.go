@@ -30,10 +30,6 @@ func newConfig(t *testing.T, path string) *ws.Config {
 	config, _ := ws.NewConfig(fmt.Sprintf("ws://%s%s", serverAddr, path), "http://localhost")
 	return config
 }
-func TestWeb(t *testing.T){
-	t.Error("No tests")
-}
-
 func createClient(t *testing.T) *ws.Conn{
 
 	// websocket.Dial()
