@@ -66,7 +66,6 @@ func (g *Octagon) Broadcast(message string) {
 	if ws.Message.Send(g.last, message) != nil {
 		g.Disconnect()
 	}
-
 }
 
 
@@ -193,8 +192,12 @@ type multiEcho struct{
 }
 var multiEchoCons *map[*ws.Conn]*multiEcho;
 
+func registerMultiEchoConn(sock *ws.Conn) *multiEcho {
+	me := createMultiEchoConn(sock)
+	(*multiEchoCons)[sock] = me
+	return me
+}
 func createMultiEchoConn(sock *ws.Conn) *multiEcho {
-
 	multi := multiEcho{
 		ws: sock,
 		log: echolog{sock: sock},
@@ -215,7 +218,7 @@ func (m *multiEcho) Listen(){
 			break;
 		}
 		for conn, me := range *multiEchoCons {
-			err := ws.Message.Send(me.ws, message)
+			err := ws.Message.Send(me.ws, "woo")
 			if err != nil {
 				me.log.message(err)
 				me.log.sendFail()
@@ -227,18 +230,22 @@ func (m *multiEcho) Listen(){
 	}
 }
 
-func main() {
+func multiEchoServer(sock *ws.Conn) {
+	me := registerMultiEchoConn(sock);
+	me.Listen();
+}
+func initMultiEcho(){
 	mECons := make(map[*ws.Conn]*multiEcho);
 	multiEchoCons = &mECons
+}
+func main() {
+	initMultiEcho()
 	http.HandleFunc("/app/index", func(res http.ResponseWriter, req *http.Request) {
 		http.ServeFile(res, req, "/app/index.html") // /app/index.html for heroku
 	})
 	http.Handle("/", http.FileServer(http.Dir(os.Getenv("PWD"))))
 
-	http.Handle("/socket/multi_echo", ws.Handler(func(sock *ws.Conn) {
-		(*multiEchoCons)[sock] = createMultiEchoConn(sock);
-		(*multiEchoCons)[sock].Listen();
-	}))
+	http.Handle("/socket/multi_echo", ws.Handler(multiEchoServer))
 
 	http.Handle("/socket/new_game", ws.Handler(func(sock *ws.Conn) {
 		player := valhalla.Connect(sock)
