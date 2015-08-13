@@ -218,7 +218,7 @@ func (m *multiEcho) Listen(){
 			break;
 		}
 		for conn, me := range *multiEchoCons {
-			err := ws.Message.Send(me.ws, "woo")
+			err := ws.Message.Send(me.ws, message)
 			if err != nil {
 				me.log.message(err)
 				me.log.sendFail()
