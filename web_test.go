@@ -95,4 +95,31 @@ func TestMultiEchoTwoConn(t *testing.T){
 	conn1.Close()
 	conn2.Close()
 }
+func TestMultiEchoCloseConn(t *testing.T){
+
+	once.Do(startServer)
+	conn1 := createClient(t)
+	if conn1 == nil {
+		return;
+	}
+	conn2 := createClient(t)
+	if conn2 == nil {
+		return;
+	}
+	
+	msg := []byte("hello, world\n")
+	if _, err := conn1.Write(msg); err != nil {
+		t.Errorf("Write: %v", err)
+	}
+	verifyReceive(t,conn1,msg)
+	verifyReceive(t,conn2,msg)
+	
+	conn1.Close()
+
+	if _, err := conn2.Write(msg); err != nil {
+		t.Errorf("Write: %v", err)
+	}
+	verifyReceive(t,conn2,msg)
+	conn2.Close()
+}
 
