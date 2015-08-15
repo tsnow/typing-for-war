@@ -238,8 +238,15 @@ func initMultiEcho(){
 	mECons := make(map[*ws.Conn]*multiEcho);
 	multiEchoCons = &mECons
 }
+func bufferServer(sock *ws.Conn){
+	sock.Close()
+}
+func initBufferServer(){
+
+}
 func main() {
 	initMultiEcho()
+	initBufferServer()
 	http.HandleFunc("/app/index", func(res http.ResponseWriter, req *http.Request) {
 		http.ServeFile(res, req, "/app/index.html") // /app/index.html for heroku
 	})
@@ -247,6 +254,7 @@ func main() {
 
 	http.Handle("/socket/multi_echo", ws.Handler(multiEchoServer))
 
+	http.Handle("/socket/buffer", ws.Handler(bufferServer))
 	http.Handle("/socket/new_game", ws.Handler(func(sock *ws.Conn) {
 		player := valhalla.Connect(sock)
 /*		log := echolog{sock: sock}
