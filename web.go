@@ -238,11 +238,50 @@ func initMultiEcho(){
 	mECons := make(map[*ws.Conn]*multiEcho);
 	multiEchoCons = &mECons
 }
-func bufferServer(sock *ws.Conn){
-	sock.Close()
+type sharedBuffer struct {
+	mECons map[*ws.Conn]*multiEcho
+	buf string
+	write chan string
+	conns chan *ws.Conn
+	closes chan *ws.Conn
 }
+func (s *sharedBuffer) register(sock *ws.Conn){
+	me := createMultiEchoConn(sock)
+	s.conns <- sock
+	s.mECons[sock] = me
+}
+func (s *sharedBuffer) listen(){
+	for {
+		select {
+		case message := <- s.write:
+			s.broadcast(message)
+		case <- s.conns: // pause broadcasting while registering
+			
+		case closeConn := <- s.closes:
+			delete(s.mECons, closeConn)
+		}
+	}
+}
+func (s *sharedBuffer) broadcast(message string){
+	for conn, me := range s.mECons {
+		err := ws.Message.Send(me.ws, message)
+		if err != nil {
+			me.log.message(err)
+			me.log.sendFail()
+			me.ws.Close()
+			me.log.disconnected()
+			delete(s.mECons, conn)
+		}
+	}
+}
+func bufferServer(sock *ws.Conn){
+	chatBuf.register(sock)
+}
+var chatBuf *sharedBuffer
 func initBufferServer(){
-
+	cB := sharedBuffer{}
+	chatBuf = &cB
+	go chatBuf.listen()
 }
 func main() {
 	initMultiEcho()
