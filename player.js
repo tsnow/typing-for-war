@@ -91,7 +91,7 @@ $(document).ready(function(){
 
     // var host = "ws://typing-for-war.herokuapp.com/socket/new_game";
     // var host = "ws://phaedo.local:5002/socket/new_game";
-    var host = "ws://localhost:5002/socket/multi_echo"; 
+    var host = "ws://localhost:5002/socket/buffer"; 
     var player1 = new player('Player 1', host, $('.player1'));
     var player2 = new player('Player 2', host, $('.player2'));
 });

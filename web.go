@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"os"
@@ -240,37 +241,60 @@ func initMultiEcho(){
 }
 type sharedBuffer struct {
 	mECons map[*ws.Conn]*multiEcho
-	buf string
+	buf bytes.Buffer
 	write chan string
 	conns chan *ws.Conn
 	closes chan *ws.Conn
 }
 func (s *sharedBuffer) register(sock *ws.Conn){
 	me := createMultiEchoConn(sock)
-	s.conns <- sock
 	s.mECons[sock] = me
+	s.receive(me)
 }
 func (s *sharedBuffer) listen(){
 	for {
 		select {
 		case message := <- s.write:
-			s.broadcast(message)
-		case <- s.conns: // pause broadcasting while registering
-			
+			s.integrate(message)
+		case conn := <- s.conns:
+			s.register(conn)
 		case closeConn := <- s.closes:
-			delete(s.mECons, closeConn)
+			s.onClose(closeConn)
 		}
 	}
 }
-func (s *sharedBuffer) broadcast(message string){
-	for conn, me := range s.mECons {
-		err := ws.Message.Send(me.ws, message)
+func (s *sharedBuffer) receive(m *multiEcho){
+	m.log.connect()
+	var message string
+	for {
+		err := ws.Message.Receive(m.ws, &message)
+		if err != nil {
+			m.log.message(err)
+			m.log.receiveFail()
+			m.ws.Close()
+			m.log.disconnected()
+			s.onClose(m.ws)
+			break;
+		}
+		s.integrate(message)
+	}
+}
+func (s *sharedBuffer) integrate(message string){
+	s.buf.WriteString(message)
+	s.broadcast()
+}
+func (s *sharedBuffer) onClose(closeConn *ws.Conn){
+	delete(s.mECons, closeConn)
+}
+func (s *sharedBuffer) broadcast(){
+	for _, me := range s.mECons {
+		err := ws.Message.Send(me.ws, s.buf.String())
 		if err != nil {
 			me.log.message(err)
 			me.log.sendFail()
 			me.ws.Close()
 			me.log.disconnected()
-			delete(s.mECons, conn)
+			s.onClose(me.ws)
 		}
 	}
 }
@@ -279,7 +303,7 @@ func bufferServer(sock *ws.Conn){
 }
 var chatBuf *sharedBuffer
 func initBufferServer(){
-	cB := sharedBuffer{}
+	cB := sharedBuffer{mECons: make(map[*ws.Conn]*multiEcho)}
 	chatBuf = &cB
 	go chatBuf.listen()
 }
