@@ -10,9 +10,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-
+	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 var serverAddr string
@@ -20,7 +21,6 @@ var once sync.Once
 
 func startServer() {
 	initMultiEcho()
-	initBufferServer()
 	http.Handle("/echo", ws.Handler(multiEchoServer))
 	http.Handle("/buffer", ws.Handler(bufferServer))
 	server := httptest.NewServer(nil)
@@ -131,6 +131,7 @@ func TestMultiEchoCloseConn(t *testing.T){
 
 func TestBufferCloseConn(t *testing.T){
 	once.Do(startServer)
+	initBufferServer()
 	conn1 := createClient(t,"/buffer")
 	if conn1 == nil {
 		return;
@@ -161,6 +162,72 @@ func TestBufferCloseConn(t *testing.T){
 	}
 	combinedMsg = []byte("hello, world \ngoodnight moon")
 	verifyReceive(t,conn2,combinedMsg)
+	conn2.Close()
+}
+
+func TestBufferRace(t *testing.T){
+	once.Do(startServer)
+	initBufferServer()
+	conns := [10]*ws.Conn{}
+	writes := [10]string{}
+	msg := []byte(".")
+	done:= make(chan bool)
+	for i := range conns {
+		go func(i int){
+			defer func(){ done <- true }()
+			j := i;
+			conns[j] = createClient(t,"/buffer")
+			if conns[j] == nil {
+				return;
+			}
+			defer conns[j].Close()
+			if _, err := conns[j].Write(msg); err != nil {
+				t.Errorf("Write: %v", err)
+				return;
+			}
+			var actual_msg = make([]byte, 512)
+// 			conns[j].SetReadDeadline(time.Now().Add(time.Second))
+			n, err := conns[j].Read(actual_msg)
+			if err != nil {
+				t.Errorf("Read: %v", err)
+				return;
+			}
+			actual_msg = actual_msg[0:n]
+			writes[j] = string(actual_msg)
+		}(i)
+	}
+	go func(){
+		i := 0
+		for {
+			select {
+			case <- done:
+				i++
+				if i >= len(conns) {
+					break;
+				}
+			case <-time.After(1*time.Second):
+				t.Errorf("ran out of time")
+				close(done)
+				break;
+			}
+		}
+	}()
+	<- done
+	var b []string
+	b = writes[:]
+	fmt.Printf("{"+strings.Join(b, "_")+"}")
+	conn2 := createClient(t,"/buffer")
+	if conn2 == nil {
+		return;
+	}
+	if _, err := conn2.Write(msg); err != nil {
+		t.Errorf("Write: %v", err)
+	}
+	message := []byte("?")
+	for range conns {
+		msg = append(msg, message[0])
+	}
+	verifyReceive(t,conn2,msg)
 	conn2.Close()
 }
 
