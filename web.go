@@ -11,6 +11,7 @@ import (
 
 	"html/template"
 )
+
 type Octagon struct {
 	first      *ws.Conn
 	last       *ws.Conn
@@ -26,9 +27,9 @@ func NewOctagon() *Octagon {
 			case <-game.disconnect:
 				game.first.Close()
 				game.last.Close()
-				log.Printf("- game %s <-> %s disconnected", 
-					game.first.RemoteAddr(), 
-					game.last.RemoteAddr(), 
+				log.Printf("- game %s <-> %s disconnected",
+					game.first.RemoteAddr(),
+					game.last.RemoteAddr(),
 				)
 
 			}
@@ -69,19 +70,17 @@ func (g *Octagon) Broadcast(message string) {
 	}
 }
 
-
-
-
 type Player struct {
-	conn *ws.Conn
-	v *Valhalla
-	name string
-	password string //default idrinkyourmilkshake
+	conn       *ws.Conn
+	v          *Valhalla
+	name       string
+	password   string //default idrinkyourmilkshake
 	disconnect chan struct{}
 }
 
 var nametog int
-func (p *Player) randomName(){
+
+func (p *Player) randomName() {
 	if nametog == 0 {
 		p.name = "Buttercup"
 	} else {
@@ -90,7 +89,7 @@ func (p *Player) randomName(){
 	nametog = 1 - nametog
 }
 
-func (p *Player) Receive(){
+func (p *Player) Receive() {
 	var message string
 	if ws.Message.Receive(p.conn, &message) != nil {
 		var a struct{}
@@ -98,7 +97,7 @@ func (p *Player) Receive(){
 	}
 	p.Broadcast(message)
 }
-func (p *Player) Broadcast(message string){
+func (p *Player) Broadcast(message string) {
 	p.v.Broadcast(message)
 }
 func (p *Player) Listen() {
@@ -112,16 +111,17 @@ func (p *Player) Listen() {
 	}
 }
 
-func (v *Valhalla) Broadcast(message string){
+func (v *Valhalla) Broadcast(message string) {
 	for p, _ := range v.allYall {
 		ws.Message.Send(p.conn, message)
 	}
 }
+
 // New gives you back a Player so fresh and clean clean, yo.
 func (v *Valhalla) NewPlayer(conn *ws.Conn) *Player {
 	player := &Player{
-		v: v, 
-		conn: conn, 
+		v:          v,
+		conn:       conn,
 		disconnect: make(chan struct{}),
 	}
 	var a struct{}
@@ -135,7 +135,6 @@ func (v *Valhalla) NewPlayer(conn *ws.Conn) *Player {
 	}()
 	return player
 }
-
 
 type Valhalla struct {
 	allYall map[*Player]struct{}
@@ -151,47 +150,49 @@ func (v *Valhalla) Connect(conn *ws.Conn) *Player {
 	return p
 }
 
-func (v *Valhalla) Disconnect(p *Player){
+func (v *Valhalla) Disconnect(p *Player) {
 	delete(v.allYall, p)
 }
 
-
 // var games GameList
 var valhalla Valhalla
+
 // store players in file
 // allow players to choose opponents in a lobby
 // open root -autoname> matchmaking -e> game start
 //                                  -nothanks> lobby -chooseopponent> game start
 //                                                   -chatupguests> chatter.
 
-type echolog struct{
-  sock *ws.Conn
-}
-func (e echolog) id() string{
-	return e.sock.Request().RemoteAddr;
-}
-func (e echolog) receiveFail(){
-  log.Printf("- %s couldn't receive.", e.id())
-}
-func (e echolog) connect(){
-  log.Printf("- %s connected", e.id())
-}
-func (e echolog) sendFail(){
-log.Printf("- %s couldn't send.", e.id())
-
-}
-func (e echolog) disconnected(){
-log.Printf("- %s disconnected", e.id())
-}
-func (e echolog) message(msg error){
-	log.Printf("- %s error %s", e.id(), msg);
+type echolog struct {
+	sock *ws.Conn
 }
 
-type multiEcho struct{
-	ws *ws.Conn
+func (e echolog) id() string {
+	return e.sock.Request().RemoteAddr
+}
+func (e echolog) receiveFail() {
+	log.Printf("- %s couldn't receive.", e.id())
+}
+func (e echolog) connect() {
+	log.Printf("- %s connected", e.id())
+}
+func (e echolog) sendFail() {
+	log.Printf("- %s couldn't send.", e.id())
+
+}
+func (e echolog) disconnected() {
+	log.Printf("- %s disconnected", e.id())
+}
+func (e echolog) message(msg error) {
+	log.Printf("- %s error %s", e.id(), msg)
+}
+
+type multiEcho struct {
+	ws  *ws.Conn
 	log echolog
 }
-var multiEchoCons *map[*ws.Conn]*multiEcho;
+
+var multiEchoCons *map[*ws.Conn]*multiEcho
 
 func registerMultiEchoConn(sock *ws.Conn) *multiEcho {
 	me := createMultiEchoConn(sock)
@@ -200,12 +201,12 @@ func registerMultiEchoConn(sock *ws.Conn) *multiEcho {
 }
 func createMultiEchoConn(sock *ws.Conn) *multiEcho {
 	multi := multiEcho{
-		ws: sock,
+		ws:  sock,
 		log: echolog{sock: sock},
-	};
+	}
 	return &multi
 }
-func (m *multiEcho) Listen(){
+func (m *multiEcho) Listen() {
 	m.log.connect()
 	var message string
 	for {
@@ -216,7 +217,7 @@ func (m *multiEcho) Listen(){
 			m.ws.Close()
 			m.log.disconnected()
 			delete(*multiEchoCons, m.ws)
-			break;
+			break
 		}
 		for conn, me := range *multiEchoCons {
 			err := ws.Message.Send(me.ws, message)
@@ -232,38 +233,40 @@ func (m *multiEcho) Listen(){
 }
 
 func multiEchoServer(sock *ws.Conn) {
-	me := registerMultiEchoConn(sock);
-	me.Listen();
+	me := registerMultiEchoConn(sock)
+	me.Listen()
 }
-func initMultiEcho(){
-	mECons := make(map[*ws.Conn]*multiEcho);
+func initMultiEcho() {
+	mECons := make(map[*ws.Conn]*multiEcho)
 	multiEchoCons = &mECons
 }
+
 type sharedBuffer struct {
 	mECons map[*ws.Conn]*multiEcho
-	buf bytes.Buffer
-	write chan string
-	conns chan *ws.Conn
+	buf    bytes.Buffer
+	write  chan string
+	conns  chan *ws.Conn
 	closes chan *ws.Conn
 }
-func (s *sharedBuffer) register(sock *ws.Conn){
+
+func (s *sharedBuffer) register(sock *ws.Conn) {
 	me := createMultiEchoConn(sock)
 	s.mECons[sock] = me
 	s.receive(me)
 }
-func (s *sharedBuffer) listen(){
+func (s *sharedBuffer) listen() {
 	for {
 		select {
-		case message := <- s.write:
+		case message := <-s.write:
 			s.integrate(message)
-		case conn := <- s.conns:
+		case conn := <-s.conns:
 			s.register(conn)
-		case closeConn := <- s.closes:
+		case closeConn := <-s.closes:
 			s.onClose(closeConn)
 		}
 	}
 }
-func (s *sharedBuffer) receive(m *multiEcho){
+func (s *sharedBuffer) receive(m *multiEcho) {
 	m.log.connect()
 	var message string
 	for {
@@ -274,19 +277,19 @@ func (s *sharedBuffer) receive(m *multiEcho){
 			m.ws.Close()
 			m.log.disconnected()
 			s.onClose(m.ws)
-			break;
+			break
 		}
 		s.integrate(message)
 	}
 }
-func (s *sharedBuffer) integrate(message string){
+func (s *sharedBuffer) integrate(message string) {
 	s.buf.WriteString(message)
 	s.broadcast()
 }
-func (s *sharedBuffer) onClose(closeConn *ws.Conn){
+func (s *sharedBuffer) onClose(closeConn *ws.Conn) {
 	delete(s.mECons, closeConn)
 }
-func (s *sharedBuffer) broadcast(){
+func (s *sharedBuffer) broadcast() {
 	for _, me := range s.mECons {
 		err := ws.Message.Send(me.ws, s.buf.String())
 		if err != nil {
@@ -298,11 +301,13 @@ func (s *sharedBuffer) broadcast(){
 		}
 	}
 }
-func bufferServer(sock *ws.Conn){
+func bufferServer(sock *ws.Conn) {
 	chatBuf.register(sock)
 }
+
 var chatBuf *sharedBuffer
-func initBufferServer(){
+
+func initBufferServer() {
 	cB := sharedBuffer{mECons: make(map[*ws.Conn]*multiEcho)}
 	chatBuf = &cB
 	go chatBuf.listen()
@@ -320,24 +325,24 @@ func main() {
 	http.Handle("/socket/buffer", ws.Handler(bufferServer))
 	http.Handle("/socket/new_game", ws.Handler(func(sock *ws.Conn) {
 		player := valhalla.Connect(sock)
-/*		log := echolog{sock: sock}
-		var message string
-		go func(){
-			for {
-				if ws.Message.Receive(sock, &message) != nil {
-					log.receiveFail()
-*/					var a struct{}
+		/*		log := echolog{sock: sock}
+				var message string
+				go func(){
+					for {
+						if ws.Message.Receive(sock, &message) != nil {
+							log.receiveFail()
+		*/var a struct{}
 
-					player.disconnect <- a
-/*				}
+		player.disconnect <- a
+		/*				}
 			}
 			player.Broadcast(message)
 		}()
-*/
+		*/
 	}))
 
 	template.New("things")
-        fmt.Println("listening...", os.Getenv("PORT")) // Must be 5002 to work with frontend.
+	fmt.Println("listening...", os.Getenv("PORT")) // Must be 5002 to work with frontend.
 	err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	if err != nil {
 		panic(err)
