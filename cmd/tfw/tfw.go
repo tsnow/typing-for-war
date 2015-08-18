@@ -2,6 +2,10 @@ package main
 
 import (
 	"log"
+	"time"
+
+	"github.com/tsnow/typing-for-war/engine"
+	"github.com/tsnow/typing-for-war/engine/event"
 )
 
 func init() {
@@ -9,5 +13,11 @@ func init() {
 }
 
 func main() {
-	// ...
+	eng := engine.New()
+	go eng.Loop()
+
+	for {
+		eng.EventChan <- new(event.PlayerConnected)
+		time.Sleep(time.Second)
+	}
 }
