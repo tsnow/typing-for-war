@@ -138,16 +138,18 @@ func TestBufferCloseConn(t *testing.T) {
 		return
 	}
 
-	bkspmsg := []byte("{\"Name\":\"down\",\"KeyCode\":8}")
-	hmsg := []byte("{\"Name\":\"down\",\"KeyCode\":72}")
-	imsg := []byte("{\"Name\":\"down\",\"KeyCode\":73}")
-	h := []byte("h")
-	hi := []byte("hi")
+	bkspmsg := []byte("{\"Name\":\"down\",\"KeyRune\":8}")
+	hmsg := []byte("{\"Name\":\"down\",\"KeyRune\":72}")
+	imsg := []byte("{\"Name\":\"down\",\"KeyRune\":73}")
+	h := []byte("H")
+	hi := []byte("HI")
 	if _, err := conn1.Write(hmsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
+
 	verifyReceive(t, conn1, h)
 	verifyReceive(t, conn2, h)
+
 	if _, err := conn2.Write(imsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}

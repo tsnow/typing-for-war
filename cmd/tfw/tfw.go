@@ -39,7 +39,12 @@ func (e echolog) disconnected() {
 func (e echolog) message(msg error) {
 	log.Printf("- %s error %s", e.id(), msg)
 }
-
+func (e echolog) got(msg interface{}) {
+	log.Printf("- %s <- \"%s\"", e.id(), msg)
+}
+func (e echolog) put(msg interface{}) {
+	log.Printf("- %s -> \"%s\"", e.id(), msg)
+}
 type multiEcho struct {
 	ws  *ws.Conn
 	log echolog
@@ -88,6 +93,7 @@ func (s *sharedBuffer) receive(m *multiEcho) {
 			s.broadcast()
 			break
 		}
+		m.log.got(message)
 		s.integrate(message)
 	}
 }
@@ -96,7 +102,7 @@ func (s *sharedBuffer) integrate(kp keypress) {
 	s.broadcast()
 }
 func (s *sharedBuffer) interpret(kp keypress) {
-	if kp.Name != "up" {
+	if kp.Name != "down" {
 		return
 	}
 	if strconv.IsPrint(kp.KeyRune) {
@@ -116,6 +122,7 @@ func (s *sharedBuffer) onClose(closeConn *ws.Conn) {
 }
 func (s *sharedBuffer) broadcast() {
 	for _, me := range s.mECons {
+		me.log.put(s.buf.String())
 		err := ws.Message.Send(me.ws, s.buf.String())
 		if err != nil {
 			me.log.message(err)
