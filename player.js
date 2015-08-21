@@ -58,9 +58,9 @@ $(document).ready(function(){
 		    }
 
 		    that.send(JSON.stringify({
-			Name: n,
-			KeyRune: key.keyCode,
-			CharRune: key.charCode
+                        Name: n,
+                        KeyRune: key.keyCode,
+                        CharRune: key.charCode
 		    }));
 		};
 	    };
