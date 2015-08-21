@@ -1,9 +1,8 @@
 package player
 
 import (
-	"log"
-
 	"github.com/tsnow/typing-for-war/engine/event"
+	"github.com/tsnow/typing-for-war/logging/log"
 )
 
 // A Player represents an agent (human or otherwise) that can engage

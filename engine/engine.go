@@ -9,16 +9,15 @@ import (
 type Engine struct {
 	EventChan chan event.Event
 	Players   []*player.Player
+	Connections []*visitor.Visitor
 }
 
 // New returns an initialized Engine structure.
 func New() *Engine {
 	return &Engine{
 		EventChan: make(chan event.Event),
-		Players: []*player.Player{
-			player.New("test_one"),
-			player.New("test_two"),
-		},
+		Players: []*player.Player{},
+		Visitors: []*visitor.Visitor{}
 	}
 }
 
@@ -27,14 +26,29 @@ func (e *Engine) Loop() {
 	for {
 		ev := <-e.EventChan
 		switch ev.(type) {
+		case event.VisitorConnected:
+			e.Visitors = append(e.Visitors, ev.Visitor)
+		case event.VisitorDisconnected:
+			e.Visitors = delete(e.Visitors, ev.Visitor}
 		case event.PlayerConnected:
-			// register a player
+			e.Players = append(e.Players, ev.Player)
 		case event.PlayerDisconnected:
-			// delete a player
+			e.Players = delete(e.Players, ev.Player}
+
+		}
+		// broadcast the event to other visitors
+		for _, c := range e.Connections {
+			c.Update(ev)
 		}
 		// broadcast the event to other players
 		for _, p := range e.Players {
 			p.Update(ev)
 		}
 	}
+}
+func (e *Engine) Connect(sock *ws.conn){
+	e.EventChan <- event.VisitorConnected{sock: sock}
+}
+func (e *Engine) Disconnect(sock *ws.conn){
+	e.EventChan <- event.VisitorDisconnected{sock: sock}
 }
