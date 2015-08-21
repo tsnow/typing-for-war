@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	ws "code.google.com/p/go.net/websocket"
 	"fmt"
 	"log"
 	"net"
@@ -10,9 +11,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
-
-	ws "code.google.com/p/go.net/websocket"
 )
 
 var serverAddr string
@@ -166,54 +164,44 @@ func TestBufferCloseConn(t *testing.T) {
 func TestBufferRace(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
-	conns := [10]*ws.Conn{}
-	writes := [10]string{}
+
+	var (
+		conns  [10]*ws.Conn
+		writes [10]string
+		wg     sync.WaitGroup
+	)
+
 	msg := []byte(".")
-	done := make(chan bool)
+	wg.Add(10)
+
 	for i := range conns {
 		go func(i int) {
-			defer func() { done <- true }()
-			j := i
-			conns[j] = createClient(t, "/buffer")
-			if conns[j] == nil {
+			defer wg.Done()
+
+			if conns[i] = createClient(t, "/buffer"); conns[i] == nil {
 				return
 			}
-			defer conns[j].Close()
-			if _, err := conns[j].Write(msg); err != nil {
+			defer conns[i].Close()
+
+			if _, err := conns[i].Write(msg); err != nil {
 				t.Errorf("Write: %v", err)
 				return
 			}
-			var actual_msg = make([]byte, 512)
-			// 			conns[j].SetReadDeadline(time.Now().Add(time.Second))
-			n, err := conns[j].Read(actual_msg)
-			if err != nil {
+
+			actualMsg := make([]byte, 512)
+			if n, err := conns[i].Read(actualMsg); err != nil {
 				t.Errorf("Read: %v", err)
 				return
+			} else {
+				writes[i] = string(actualMsg[0:n])
 			}
-			actual_msg = actual_msg[0:n]
-			writes[j] = string(actual_msg)
 		}(i)
 	}
-	go func() {
-		i := 0
-		for {
-			select {
-			case <-done:
-				i++
-				if i >= len(conns) {
-					break
-				}
-			case <-time.After(1 * time.Second):
-				t.Errorf("ran out of time")
-				close(done)
-				break
-			}
-		}
-	}()
-	<-done
-	var b []string
-	b = writes[:]
-	fmt.Printf("{" + strings.Join(b, "_") + "}")
+
+	wg.Wait()
+
+	fmt.Printf("{" + strings.Join(writes[:], "") + "}")
+
 	conn2 := createClient(t, "/buffer")
 	if conn2 == nil {
 		return
@@ -221,7 +209,7 @@ func TestBufferRace(t *testing.T) {
 	if _, err := conn2.Write(msg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
-	message := []byte("?")
+	message := []byte(".")
 	for range conns {
 		msg = append(msg, message[0])
 	}
