@@ -17,8 +17,6 @@ var serverAddr string
 var once sync.Once
 
 func startServer() {
-	initMultiEcho()
-	http.Handle("/echo", ws.Handler(multiEchoServer))
 	http.Handle("/buffer", ws.Handler(bufferServer))
 	server := httptest.NewServer(nil)
 	serverAddr = server.Listener.Addr().String()
@@ -44,7 +42,7 @@ func createClient(t *testing.T, resource string) *ws.Conn {
 	}
 	return conn
 }
-
+/*
 func TestMultiEchoOneConn(t *testing.T) {
 
 	once.Do(startServer)
@@ -60,7 +58,7 @@ func TestMultiEchoOneConn(t *testing.T) {
 	verifyReceive(t, conn, msg)
 	conn.Close()
 }
-
+*/
 func verifyReceive(t *testing.T, conn *ws.Conn, msg []byte) {
 	var actual_msg = make([]byte, 512)
 
@@ -74,7 +72,7 @@ func verifyReceive(t *testing.T, conn *ws.Conn, msg []byte) {
 	}
 
 }
-
+/*
 func TestMultiEchoTwoConn(t *testing.T) {
 
 	once.Do(startServer)
@@ -97,6 +95,8 @@ func TestMultiEchoTwoConn(t *testing.T) {
 	conn1.Close()
 	conn2.Close()
 }
+*/
+/*
 func TestMultiEchoCloseConn(t *testing.T) {
 
 	once.Do(startServer)
@@ -124,7 +124,7 @@ func TestMultiEchoCloseConn(t *testing.T) {
 	verifyReceive(t, conn2, msg)
 	conn2.Close()
 }
-
+*/
 func TestBufferCloseConn(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
