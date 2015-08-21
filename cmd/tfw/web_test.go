@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"sync"
 	"testing"
 )
@@ -42,6 +41,7 @@ func createClient(t *testing.T, resource string) *ws.Conn {
 	}
 	return conn
 }
+
 /*
 func TestMultiEchoOneConn(t *testing.T) {
 
@@ -72,6 +72,7 @@ func verifyReceive(t *testing.T, conn *ws.Conn, msg []byte) {
 	}
 
 }
+
 /*
 func TestMultiEchoTwoConn(t *testing.T) {
 
@@ -137,30 +138,32 @@ func TestBufferCloseConn(t *testing.T) {
 		return
 	}
 
-	conn1msg := []byte("hello, ")
-	conn2msg := []byte("world \n")
-	combinedMsg := []byte("hello, world \n")
-	if _, err := conn1.Write(conn1msg); err != nil {
+	bkspmsg := []byte("{\"Name\":\"down\",\"KeyCode\":8}")
+	hmsg := []byte("{\"Name\":\"down\",\"KeyCode\":72}")
+	imsg := []byte("{\"Name\":\"down\",\"KeyCode\":73}")
+	h := []byte("h")
+	hi := []byte("hi")
+	if _, err := conn1.Write(hmsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
-	verifyReceive(t, conn1, conn1msg)
-	verifyReceive(t, conn2, conn1msg)
-	if _, err := conn2.Write(conn2msg); err != nil {
+	verifyReceive(t, conn1, h)
+	verifyReceive(t, conn2, h)
+	if _, err := conn2.Write(imsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
-	verifyReceive(t, conn1, combinedMsg)
-	verifyReceive(t, conn2, combinedMsg)
+	verifyReceive(t, conn1, hi)
+	verifyReceive(t, conn2, hi)
 
 	conn1.Close()
 
-	if _, err := conn2.Write([]byte("goodnight moon")); err != nil {
+	if _, err := conn2.Write(bkspmsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
-	combinedMsg = []byte("hello, world \ngoodnight moon")
-	verifyReceive(t, conn2, combinedMsg)
+	verifyReceive(t, conn2, h)
 	conn2.Close()
 }
 
+/*
 func TestBufferRace(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
@@ -216,3 +219,4 @@ func TestBufferRace(t *testing.T) {
 	verifyReceive(t, conn2, msg)
 	conn2.Close()
 }
+*/

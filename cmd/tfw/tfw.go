@@ -2,18 +2,20 @@ package main
 
 import (
 	"bytes"
+	ws "code.google.com/p/go.net/websocket"
 	"fmt"
+	//	"github.com/tsnow/typing-for-war/engine"
 	"log"
-//	"time"
 	"net/http"
 	"os"
-	ws "code.google.com/p/go.net/websocket"
-//	"github.com/tsnow/typing-for-war/engine"
+	"strconv"
+	//	"time"
 )
 
 func init() {
 	log.Println("starting typing-for-war...")
 }
+
 type echolog struct {
 	sock *ws.Conn
 }
@@ -42,6 +44,7 @@ type multiEcho struct {
 	ws  *ws.Conn
 	log echolog
 }
+
 func createMultiEchoConn(sock *ws.Conn) *multiEcho {
 	multi := multiEcho{
 		ws:  sock,
@@ -52,7 +55,7 @@ func createMultiEchoConn(sock *ws.Conn) *multiEcho {
 
 type sharedBuffer struct {
 	mECons map[*ws.Conn]*multiEcho
-	buf    bytes.Buffer
+	buf    *bytes.Buffer
 	write  chan string
 	conns  chan *ws.Conn
 	closes chan *ws.Conn
@@ -63,25 +66,50 @@ func (s *sharedBuffer) register(sock *ws.Conn) {
 	s.mECons[sock] = me
 	s.receive(me)
 }
+
+type keypress struct {
+	Name     string
+	KeyRune  rune
+	CharRune rune
+}
+
 func (s *sharedBuffer) receive(m *multiEcho) {
 	m.log.connect()
-	var message string
+	var message keypress
 	for {
-		err := ws.Message.Receive(m.ws, &message)
+		err := ws.JSON.Receive(m.ws, &message)
 		if err != nil {
 			m.log.message(err)
 			m.log.receiveFail()
 			m.ws.Close()
 			m.log.disconnected()
 			s.onClose(m.ws)
+			s.buf.WriteString("client disconnected")
+			s.broadcast()
 			break
 		}
 		s.integrate(message)
 	}
 }
-func (s *sharedBuffer) integrate(message string) {
-	s.buf.WriteString(message)
+func (s *sharedBuffer) integrate(kp keypress) {
+	s.interpret(kp)
 	s.broadcast()
+}
+func (s *sharedBuffer) interpret(kp keypress) {
+	if kp.Name != "up" {
+		return
+	}
+	if strconv.IsPrint(kp.KeyRune) {
+		s.buf.WriteRune(kp.KeyRune)
+		return
+	}
+
+	if kp.KeyRune == rune(8) { // backspace
+		oldbuf := s.buf.Bytes()
+		backOneChar := len(oldbuf) - 1
+		s.buf = bytes.NewBuffer(oldbuf[:backOneChar])
+	}
+
 }
 func (s *sharedBuffer) onClose(closeConn *ws.Conn) {
 	delete(s.mECons, closeConn)
@@ -105,7 +133,7 @@ func bufferServer(sock *ws.Conn) {
 var chatBuf *sharedBuffer
 
 func initBufferServer() {
-	cB := sharedBuffer{mECons: make(map[*ws.Conn]*multiEcho)}
+	cB := sharedBuffer{mECons: make(map[*ws.Conn]*multiEcho), buf: bytes.NewBuffer([]byte{})}
 	chatBuf = &cB
 }
 func main() {

@@ -57,13 +57,11 @@ $(document).ready(function(){
 			that.ticker();
 		    }
 
-		    that.send(JSON.stringify([
-			n,
-			key.keyCode,
-			String.fromCharCode(key.keyCode),
-			key.keyCode <= 64 ? "^"+String.fromCharCode(key.keyCode + 64) : "",
-			key.charCode
-		    ]));
+		    that.send(JSON.stringify({
+			Name: n,
+			KeyRune: key.keyCode,
+			CharRune: key.charCode
+		    }));
 		};
 	    };
 	    that.container.find('#text').keydown(handler('down')).keypress(handler('press')).keyup(handler('up'));
