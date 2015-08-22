@@ -126,7 +126,44 @@ func TestMultiEchoCloseConn(t *testing.T) {
 	conn2.Close()
 }
 */
-func TestBufferCloseConn(t *testing.T) {
+
+func TestGameBackspace(t *testing.T) {
+	once.Do(startServer)
+	initBufferServer()
+	conn1 := createClient(t, "/buffer")
+	if conn1 == nil {
+		return
+	}
+	conn2 := createClient(t, "/buffer")
+	if conn2 == nil {
+		return
+	}
+
+	bkspmsg := []byte("{\"Name\":\"down\",\"KeyRune\":8}")
+	hmsg := []byte("{\"Name\":\"down\",\"KeyRune\":72}")
+	imsg := []byte("{\"Name\":\"down\",\"KeyRune\":73}")
+	h := []byte("H")
+	hi := []byte("HI")
+	if _, err := conn1.Write(hmsg); err != nil {
+		t.Errorf("Write: %v", err)
+	}
+
+	verifyReceive(t, conn1, h)
+
+	if _, err := conn1.Write(imsg); err != nil {
+		t.Errorf("Write: %v", err)
+	}
+	verifyReceive(t, conn1, hi)
+
+	if _, err := conn1.Write(bkspmsg); err != nil {
+		t.Errorf("Write: %v", err)
+	}
+	verifyReceive(t, conn1, h)
+	conn1.Close()
+	conn2.Close()
+}
+
+func TestGameReconnectConn(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
 	conn1 := createClient(t, "/buffer")
@@ -158,11 +195,17 @@ func TestBufferCloseConn(t *testing.T) {
 
 	conn1.Close()
 
+	conn1 = createClient(t, "/buffer")
+	if conn1 == nil {
+		return
+	}
+
 	if _, err := conn2.Write(bkspmsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
 	verifyReceive(t, conn2, h)
 	conn2.Close()
+	conn1.Close()
 }
 
 /*

@@ -69,29 +69,43 @@ type game struct {
 }
 
 func newGame() *game {
-	g := game{players: make(map[*ws.Conn]*player)}
+	g := game{players: make(map[position]*player)}
+	fore := player{
+		pos: Fore,
+		buf: bytes.NewBuffer([]byte{}),
+		me: nil,
+	}
+	g.players[Fore] = &fore
+	aft := player{
+		pos: Aft,
+		buf: bytes.NewBuffer([]byte{}),
+		me: nil,
+	}
+	g.players[Aft] = &aft
 	return &g
 }
-func (g *game) fore() *multiEcho {
+func (g *game) fore() *player {
 	return g.players[Fore]
 }
-func (g *game) aft() *multiEcho {
+func (g *game) aft() *player {
 	return g.players[Aft]
 }
 func (g *game) gameFull() bool {
-	return !(g.players[Fore] == nil) &&
-		!(g.players[Aft] == nil)
+	return !(g.players[Fore].me == nil) &&
+		!(g.players[Aft].me == nil)
 }
 func (g *game) rejectVisitor(sock *ws.Conn) {
 	me := createMultiEchoConn(sock)
-	//TODO: this is an example of a "visitor" behavior.
+	//TODO: this is an example of a site visitor behavior.
 	me.log.connect()
-	err := ws.Message.Send(me.ws, "game full")
+	err := ws.JSON.Send(me.ws, gameState{
+		Status: NoGameAvailable,
+	})
 	if err != nil {
 		me.log.message(err)
 		me.log.sendFail()
 	}
-	m.log.disconnected()
+	me.log.disconnected()
 	me.ws.Close()
 }
 
@@ -101,36 +115,33 @@ type player struct {
 	buf *bytes.Buffer
 }
 
-func (g *game) myPlayer(pos position) *player {
+func (g *game) getPlayer(pos position) *player {
 	return g.players[pos]
 }
 func (g *game) otherPlayer(pos position) *player {
+	var out position
 	if pos == Fore {
-		return g.myPlayer(Aft)
+		out = Aft
 	} else if pos == Aft {
-		return g.myPlayer(Fore)
+		out = Fore
 	}
+	return g.getPlayer(out)
 }
 func (g *game) register(sock *ws.Conn) {
 	if g.gameFull() {
 		g.rejectVisitor(sock)
 		return
 	}
-
-	var pos position
-	if g.players[Fore] == nil {
-		pos = Fore
-	} else if g.players[Aft] == nil {
-		pos = Aft
+	
+	var chosenPlayer *player
+	for _, p := range g.players {
+		if p.me == nil {
+			chosenPlayer = p
+		}
 	}
 	me := createMultiEchoConn(sock)
-	p := player{
-		pos: pos,
-		buf: bytes.NewBuffer([]byte{}),
-		me:  me,
-	}
-	g.players[pos] = &p
-	g.receive(p)
+	chosenPlayer.me = me
+	g.receive(chosenPlayer)
 }
 
 type keypress struct {
@@ -139,9 +150,19 @@ type keypress struct {
 	CharRune rune
 }
 
+type status string
+const WaitingForOpponent status = "waiting_for_opponent"
+const NoGameAvailable status = "no_games_available"
+const Gaming status = "gaming"
+
+type gameState struct {
+	Status status
+	OpponentPlay string
+	MyPlay string
+}
+
 func (g *game) receive(p *player) {
 	//TODO: make multiEcho into player, including position, add to logging
-	o := g.otherPlayer(p.pos)
 	p.me.log.connect()
 
 	var message keypress
@@ -152,14 +173,12 @@ func (g *game) receive(p *player) {
 			p.me.log.receiveFail()
 			p.me.ws.Close()
 			p.me.log.disconnected()
-			g.onClose(p.pos)
-			p.buf.WriteString("was disconnected")
-			o.buf.WriteString("opponent disconnected")
+			p.onClose()
 			g.broadcast()
 			break
 		}
 		p.me.log.got(message)
-		g.integrate(message)
+		g.integrate(p, message)
 	}
 }
 func (g *game) integrate(p *player, kp keypress) {
@@ -182,19 +201,36 @@ func (g *game) interpret(p *player, kp keypress) {
 	}
 
 }
-func (g *game) onClose(pos position) {
-	delete(g.players, pos)
+func (p *player) onClose() {
+	p.me = nil
+}
+func (g *game) gameState(p *player) gameState{
+	o := g.otherPlayer(p.pos)
+	var state status
+	if g.gameFull(){
+		state = Gaming
+	} else {
+		state = WaitingForOpponent
+	}
+	return gameState{
+		Status: state,
+		OpponentPlay: o.buf.String(),
+		MyPlay: p.buf.String(),
+	}
 }
 func (g *game) broadcast() {
 	for _, p := range g.players {
+		if p.me == nil {
+			continue;
+		}
 		p.me.log.put(p.buf.String())
-		err := ws.Message.Send(p.me.ws, p.buf.String())
+		err := ws.JSON.Send(p.me.ws, g.gameState(p))
 		if err != nil {
 			p.me.log.message(err)
 			p.me.log.sendFail()
 			p.me.ws.Close()
 			p.me.log.disconnected()
-			g.onClose(p.pos)
+			p.onClose()
 		}
 	}
 }
