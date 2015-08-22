@@ -45,6 +45,7 @@ func (e echolog) got(msg interface{}) {
 func (e echolog) put(msg interface{}) {
 	log.Printf("- %s -> \"%s\"", e.id(), msg)
 }
+
 type multiEcho struct {
 	ws  *ws.Conn
 	log echolog
@@ -58,18 +59,78 @@ func createMultiEchoConn(sock *ws.Conn) *multiEcho {
 	return &multi
 }
 
-type sharedBuffer struct {
-	mECons map[*ws.Conn]*multiEcho
-	buf    *bytes.Buffer
-	write  chan string
-	conns  chan *ws.Conn
-	closes chan *ws.Conn
+type position string
+
+const Fore position = "fore"
+const Aft position = "aft"
+
+type game struct {
+	players map[position]*player
 }
 
-func (s *sharedBuffer) register(sock *ws.Conn) {
+func newGame() *game {
+	g := game{players: make(map[*ws.Conn]*player)}
+	return &g
+}
+func (g *game) fore() *multiEcho {
+	return g.players[Fore]
+}
+func (g *game) aft() *multiEcho {
+	return g.players[Aft]
+}
+func (g *game) gameFull() bool {
+	return !(g.players[Fore] == nil) &&
+		!(g.players[Aft] == nil)
+}
+func (g *game) rejectVisitor(sock *ws.Conn) {
 	me := createMultiEchoConn(sock)
-	s.mECons[sock] = me
-	s.receive(me)
+	//TODO: this is an example of a "visitor" behavior.
+	me.log.connect()
+	err := ws.Message.Send(me.ws, "game full")
+	if err != nil {
+		me.log.message(err)
+		me.log.sendFail()
+	}
+	m.log.disconnected()
+	me.ws.Close()
+}
+
+type player struct {
+	me  *multiEcho
+	pos position
+	buf *bytes.Buffer
+}
+
+func (g *game) myPlayer(pos position) *player {
+	return g.players[pos]
+}
+func (g *game) otherPlayer(pos position) *player {
+	if pos == Fore {
+		return g.myPlayer(Aft)
+	} else if pos == Aft {
+		return g.myPlayer(Fore)
+	}
+}
+func (g *game) register(sock *ws.Conn) {
+	if g.gameFull() {
+		g.rejectVisitor(sock)
+		return
+	}
+
+	var pos position
+	if g.players[Fore] == nil {
+		pos = Fore
+	} else if g.players[Aft] == nil {
+		pos = Aft
+	}
+	me := createMultiEchoConn(sock)
+	p := player{
+		pos: pos,
+		buf: bytes.NewBuffer([]byte{}),
+		me:  me,
+	}
+	g.players[pos] = &p
+	g.receive(p)
 }
 
 type keypress struct {
@@ -78,70 +139,74 @@ type keypress struct {
 	CharRune rune
 }
 
-func (s *sharedBuffer) receive(m *multiEcho) {
-	m.log.connect()
+func (g *game) receive(p *player) {
+	//TODO: make multiEcho into player, including position, add to logging
+	o := g.otherPlayer(p.pos)
+	p.me.log.connect()
+
 	var message keypress
 	for {
-		err := ws.JSON.Receive(m.ws, &message)
+		err := ws.JSON.Receive(p.me.ws, &message)
 		if err != nil {
-			m.log.message(err)
-			m.log.receiveFail()
-			m.ws.Close()
-			m.log.disconnected()
-			s.onClose(m.ws)
-			s.buf.WriteString("client disconnected")
-			s.broadcast()
+			p.me.log.message(err)
+			p.me.log.receiveFail()
+			p.me.ws.Close()
+			p.me.log.disconnected()
+			g.onClose(p.pos)
+			p.buf.WriteString("was disconnected")
+			o.buf.WriteString("opponent disconnected")
+			g.broadcast()
 			break
 		}
-		m.log.got(message)
-		s.integrate(message)
+		p.me.log.got(message)
+		g.integrate(message)
 	}
 }
-func (s *sharedBuffer) integrate(kp keypress) {
-	s.interpret(kp)
-	s.broadcast()
+func (g *game) integrate(p *player, kp keypress) {
+	g.interpret(p, kp)
+	g.broadcast()
 }
-func (s *sharedBuffer) interpret(kp keypress) {
+func (g *game) interpret(p *player, kp keypress) {
 	if kp.Name != "down" {
 		return
 	}
 	if strconv.IsPrint(kp.KeyRune) {
-		s.buf.WriteRune(kp.KeyRune)
+		p.buf.WriteRune(kp.KeyRune)
 		return
 	}
 
 	if kp.KeyRune == rune(8) { // backspace
-		oldbuf := s.buf.Bytes()
+		oldbuf := p.buf.Bytes()
 		backOneChar := len(oldbuf) - 1
-		s.buf = bytes.NewBuffer(oldbuf[:backOneChar])
+		p.buf = bytes.NewBuffer(oldbuf[:backOneChar])
 	}
 
 }
-func (s *sharedBuffer) onClose(closeConn *ws.Conn) {
-	delete(s.mECons, closeConn)
+func (g *game) onClose(pos position) {
+	delete(g.players, pos)
 }
-func (s *sharedBuffer) broadcast() {
-	for _, me := range s.mECons {
-		me.log.put(s.buf.String())
-		err := ws.Message.Send(me.ws, s.buf.String())
+func (g *game) broadcast() {
+	for _, p := range g.players {
+		p.me.log.put(p.buf.String())
+		err := ws.Message.Send(p.me.ws, p.buf.String())
 		if err != nil {
-			me.log.message(err)
-			me.log.sendFail()
-			me.ws.Close()
-			me.log.disconnected()
-			s.onClose(me.ws)
+			p.me.log.message(err)
+			p.me.log.sendFail()
+			p.me.ws.Close()
+			p.me.log.disconnected()
+			g.onClose(p.pos)
 		}
 	}
 }
 func bufferServer(sock *ws.Conn) {
-	chatBuf.register(sock)
+	persistGame.register(sock)
 }
 
-var chatBuf *sharedBuffer
+var persistGame *game
 
 func initBufferServer() {
-	cB := sharedBuffer{mECons: make(map[*ws.Conn]*multiEcho), buf: bytes.NewBuffer([]byte{})}
-	chatBuf = &cB
+	g := newGame()
+	persistGame = g
 }
 func main() {
 	initBufferServer()
