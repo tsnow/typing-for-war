@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	//	"time"
 )
 
@@ -242,11 +243,17 @@ func bufferServer(sock *ws.Conn) {
 }
 
 var persistGame *game
-
+var mutex = &sync.Mutex{}
 func initBufferServer() {
+	mutex.Lock()
 	g := newGame()
 	persistGame = g
 }
+func releaseBufferServer() {
+	persistGame = nil
+	mutex.Unlock()
+}
+
 func main() {
 	initBufferServer()
 	http.HandleFunc("/app/index", func(res http.ResponseWriter, req *http.Request) {

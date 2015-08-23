@@ -41,24 +41,6 @@ func createClient(t *testing.T, resource string) *ws.Conn {
 	}
 	return conn
 }
-
-/*
-func TestMultiEchoOneConn(t *testing.T) {
-
-	once.Do(startServer)
-	conn := createClient(t, "/echo")
-	if conn == nil {
-		return
-	}
-
-	msg := []byte("hello, world\n")
-	if _, err := conn.Write(msg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-	verifyReceive(t, conn, msg)
-	conn.Close()
-}
-*/
 func verifyReceive(t *testing.T, conn *ws.Conn, msg []byte) {
 	var actual_msg = make([]byte, 512)
 
@@ -72,60 +54,6 @@ func verifyReceive(t *testing.T, conn *ws.Conn, msg []byte) {
 	}
 
 }
-
-/*
-func TestMultiEchoTwoConn(t *testing.T) {
-
-	once.Do(startServer)
-	conn1 := createClient(t, "/echo")
-	if conn1 == nil {
-		return
-	}
-	conn2 := createClient(t, "/echo")
-	if conn2 == nil {
-		return
-	}
-
-	msg := []byte("hello, world\n")
-	if _, err := conn1.Write(msg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-	verifyReceive(t, conn1, msg)
-	verifyReceive(t, conn2, msg)
-
-	conn1.Close()
-	conn2.Close()
-}
-*/
-/*
-func TestMultiEchoCloseConn(t *testing.T) {
-
-	once.Do(startServer)
-	conn1 := createClient(t, "/echo")
-	if conn1 == nil {
-		return
-	}
-	conn2 := createClient(t, "/echo")
-	if conn2 == nil {
-		return
-	}
-
-	msg := []byte("hello, world\n")
-	if _, err := conn1.Write(msg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-	verifyReceive(t, conn1, msg)
-	verifyReceive(t, conn2, msg)
-
-	conn1.Close()
-
-	if _, err := conn2.Write(msg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-	verifyReceive(t, conn2, msg)
-	conn2.Close()
-}
-*/
 
 func TestGameBackspace(t *testing.T) {
 	once.Do(startServer)
@@ -161,6 +89,7 @@ func TestGameBackspace(t *testing.T) {
 	verifyReceive(t, conn1, h)
 	conn1.Close()
 	conn2.Close()
+	releaseBufferServer()
 }
 
 func TestGameReconnectConn(t *testing.T) {
@@ -222,62 +151,5 @@ func TestGameReconnectConn(t *testing.T) {
 	verifyReceive(t, conn2, regame2)
 	conn2.Close()
 	conn1.Close()
+	releaseBufferServer()
 }
-
-/*
-func TestBufferRace(t *testing.T) {
-	once.Do(startServer)
-	initBufferServer()
-
-	var (
-		conns  [10]*ws.Conn
-		writes [10]string
-		wg     sync.WaitGroup
-	)
-
-	msg := []byte(".")
-	wg.Add(10)
-
-	for i := range conns {
-		go func(i int) {
-			defer wg.Done()
-
-			if conns[i] = createClient(t, "/buffer"); conns[i] == nil {
-				return
-			}
-			defer conns[i].Close()
-
-			if _, err := conns[i].Write(msg); err != nil {
-				t.Errorf("Write: %v", err)
-				return
-			}
-
-			actualMsg := make([]byte, 512)
-			if n, err := conns[i].Read(actualMsg); err != nil {
-				t.Errorf("Read: %v", err)
-				return
-			} else {
-				writes[i] = string(actualMsg[0:n])
-			}
-		}(i)
-	}
-
-	wg.Wait()
-
-	fmt.Printf("{" + strings.Join(writes[:], "") + "}")
-
-	conn2 := createClient(t, "/buffer")
-	if conn2 == nil {
-		return
-	}
-	if _, err := conn2.Write(msg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-	message := []byte(".")
-	for range conns {
-		msg = append(msg, message[0])
-	}
-	verifyReceive(t, conn2, msg)
-	conn2.Close()
-}
-*/
