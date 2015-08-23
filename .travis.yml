@@ -5,3 +5,4 @@ go:
 language: go
 script:
  - go test -v ./...
+sudo: false
