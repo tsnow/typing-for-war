@@ -142,8 +142,8 @@ func TestGameBackspace(t *testing.T) {
 	bkspmsg := []byte("{\"Name\":\"down\",\"KeyRune\":8}")
 	hmsg := []byte("{\"Name\":\"down\",\"KeyRune\":72}")
 	imsg := []byte("{\"Name\":\"down\",\"KeyRune\":73}")
-	h := []byte("H")
-	hi := []byte("HI")
+	h := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":\"\",\"MyPlay\":\"H\"}")
+	hi := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":\"\",\"MyPlay\":\"HI\"}")
 	if _, err := conn1.Write(hmsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
@@ -178,32 +178,48 @@ func TestGameReconnectConn(t *testing.T) {
 	bkspmsg := []byte("{\"Name\":\"down\",\"KeyRune\":8}")
 	hmsg := []byte("{\"Name\":\"down\",\"KeyRune\":72}")
 	imsg := []byte("{\"Name\":\"down\",\"KeyRune\":73}")
-	h := []byte("H")
-	hi := []byte("HI")
+	h1 := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":\"\",\"MyPlay\":\"H\"}")
+	h2 := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":\"H\",\"MyPlay\":\"\"}")
+	i1 := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":\"I\",\"MyPlay\":\"H\"}")
+	i2 := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":\"H\",\"MyPlay\":\"I\"}")
 	if _, err := conn1.Write(hmsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
 
-	verifyReceive(t, conn1, h)
-	verifyReceive(t, conn2, h)
+	verifyReceive(t, conn1, h1)
+	verifyReceive(t, conn2, h2)
 
 	if _, err := conn2.Write(imsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
-	verifyReceive(t, conn1, hi)
-	verifyReceive(t, conn2, hi)
+	verifyReceive(t, conn1, i1)
+	verifyReceive(t, conn2, i2)
 
 	conn1.Close()
+
+	if _, err := conn2.Write(bkspmsg); err != nil {
+		t.Errorf("Write: %v", err)
+	}
+	que := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":\"H\",\"MyPlay\":\"\"}")
+	verifyReceive(t, conn2, que)
+
+	wait2 := []byte("{\"Status\":\"waiting_for_opponent\",\"OpponentPlay\":\"H\",\"MyPlay\":\"\"}")
+	if _, err := conn2.Write(bkspmsg); err != nil {
+		t.Errorf("Write: %v", err)
+	}
+	verifyReceive(t, conn2, wait2)
 
 	conn1 = createClient(t, "/buffer")
 	if conn1 == nil {
 		return
 	}
-
-	if _, err := conn2.Write(bkspmsg); err != nil {
+	if _, err := conn1.Write(imsg); err != nil {
 		t.Errorf("Write: %v", err)
 	}
-	verifyReceive(t, conn2, h)
+	wait1 := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":\"\",\"MyPlay\":\"HI\"}")
+	regame2 := []byte("{\"Status\":\"waiting_for_opponent\",\"OpponentPlay\":\"H\",\"MyPlay\":\"\"}")
+	verifyReceive(t, conn1, wait1)
+	verifyReceive(t, conn2, regame2)
 	conn2.Close()
 	conn1.Close()
 }

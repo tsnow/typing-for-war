@@ -197,6 +197,9 @@ func (g *game) interpret(p *player, kp keypress) {
 	if kp.KeyRune == rune(8) { // backspace
 		oldbuf := p.buf.Bytes()
 		backOneChar := len(oldbuf) - 1
+		if len(oldbuf) == 0 {
+			backOneChar=0
+		}
 		p.buf = bytes.NewBuffer(oldbuf[:backOneChar])
 	}
 
