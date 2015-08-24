@@ -16,7 +16,7 @@ var serverAddr string
 var once sync.Once
 
 func startServer() {
-	http.Handle("/buffer", ws.Handler(bufferServer))
+	http.Handle(gameRootPath(), ws.Handler(bufferServer))
 	server := httptest.NewServer(nil)
 	serverAddr = server.Listener.Addr().String()
 	log.Print("Test WebSocket server listening on ", serverAddr)
@@ -58,11 +58,12 @@ func verifyReceive(t *testing.T, conn *ws.Conn, msg []byte) {
 func TestGameBackspace(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
-	conn1 := createClient(t, "/buffer")
+	g := nextGame()
+	conn1 := createClient(t, buildGamePath(g))
 	if conn1 == nil {
 		return
 	}
-	conn2 := createClient(t, "/buffer")
+	conn2 := createClient(t, buildGamePath(g))
 	if conn2 == nil {
 		return
 	}
@@ -95,11 +96,12 @@ func TestGameBackspace(t *testing.T) {
 func TestGameReconnectConn(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
-	conn1 := createClient(t, "/buffer")
+	g := nextGame()
+	conn1 := createClient(t, buildGamePath(g))
 	if conn1 == nil {
 		return
 	}
-	conn2 := createClient(t, "/buffer")
+	conn2 := createClient(t, buildGamePath(g))
 	if conn2 == nil {
 		return
 	}

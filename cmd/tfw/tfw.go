@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	//	"time"
 )
@@ -67,20 +68,26 @@ const Aft position = "aft"
 
 type game struct {
 	players map[position]*player
+	gid gameID
 }
 
-func newGame() *game {
-	g := game{players: make(map[position]*player)}
+func newGame(gid gameID) *game {
+	g := game{
+		players: make(map[position]*player),
+		gid: gid,
+	}
 	fore := player{
 		pos: Fore,
 		buf: bytes.NewBuffer([]byte{}),
 		me: nil,
+		g: &g,
 	}
 	g.players[Fore] = &fore
 	aft := player{
 		pos: Aft,
 		buf: bytes.NewBuffer([]byte{}),
 		me: nil,
+		g: &g,
 	}
 	g.players[Aft] = &aft
 	return &g
@@ -95,7 +102,7 @@ func (g *game) gameFull() bool {
 	return !(g.players[Fore].me == nil) &&
 		!(g.players[Aft].me == nil)
 }
-func (g *game) rejectVisitor(sock *ws.Conn) {
+func rejectVisitor(sock *ws.Conn) {
 	me := createMultiEchoConn(sock)
 	//TODO: this is an example of a site visitor behavior.
 	me.log.connect()
@@ -114,6 +121,7 @@ type player struct {
 	me  *multiEcho
 	pos position
 	buf *bytes.Buffer
+	g *game
 }
 
 func (g *game) getPlayer(pos position) *player {
@@ -130,7 +138,7 @@ func (g *game) otherPlayer(pos position) *player {
 }
 func (g *game) register(sock *ws.Conn) {
 	if g.gameFull() {
-		g.rejectVisitor(sock)
+		rejectVisitor(sock)
 		return
 	}
 	
@@ -239,19 +247,48 @@ func (g *game) broadcast() {
 	}
 }
 func bufferServer(sock *ws.Conn) {
-	persistGame.register(sock)
+	g := parseGamePath(sock.Request().URL.Path)
+	if g == nil {
+		rejectVisitor(sock)
+		return 
+	}
+	g.register(sock)
 }
-
-var persistGame *game
+type gameID string
+var games map[gameID]*game
+func nextGameID() gameID{
+	gameid := int64(0)
+	for i, _ := range games {
+		gid, err := strconv.ParseInt(string(i), 10, 64)
+		if gid > gameid && err == nil {
+			gameid = gid
+		}
+	}
+	return gameID(strconv.FormatInt(gameid + 1, 10))
+}
+func parseGamePath(url string) *game{
+	gid := gameID(strings.TrimPrefix(url, gameRootPath()))
+	return games[gid]
+}
+func buildGamePath(gid gameID) string{
+	return gameRootPath() + string(gid)
+}
 var mutex = &sync.Mutex{}
-func initBufferServer() {
+func nextGame() gameID{
 	mutex.Lock()
-	g := newGame()
-	persistGame = g
+	gid := nextGameID()
+	games[gid] = newGame(gid)
+	mutex.Unlock()
+	return gid
+
+}
+func gameRootPath() string{
+	return "/game/"
+}
+func initBufferServer() {
+	games = make(map[gameID]*game)
 }
 func releaseBufferServer() {
-	persistGame = nil
-	mutex.Unlock()
 }
 
 func main() {
@@ -261,7 +298,7 @@ func main() {
 	})
 	http.Handle("/", http.FileServer(http.Dir(os.Getenv("PWD"))))
 
-	http.Handle("/socket/buffer", ws.Handler(bufferServer))
+	http.Handle(gameRootPath(), ws.Handler(bufferServer))
 
 	fmt.Println("listening...", os.Getenv("PORT")) // Must be 5002 to work with frontend.
 	err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
