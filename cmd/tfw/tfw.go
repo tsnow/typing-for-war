@@ -257,6 +257,7 @@ func (g *game) broadcast() {
 	}
 }
 func bufferServer(sock *ws.Conn) {
+	log.Printf("%s %s", sock.Request().Method, sock.Request().URL.Path)
 	g := parseGamePath(sock.Request().URL.Path)
 	if g == nil {
 		visitor{sock}.reject()
