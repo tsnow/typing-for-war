@@ -48,19 +48,6 @@ func (e echolog) put(msg interface{}) {
 	log.Printf("- %s -> \"%s\"", e.id(), msg)
 }
 
-type multiEcho struct {
-	ws  *ws.Conn
-	log echolog
-}
-
-func createMultiEchoConn(sock *ws.Conn) *multiEcho {
-	multi := multiEcho{
-		ws:  sock,
-		log: echolog{sock: sock},
-	}
-	return &multi
-}
-
 type position string
 
 const Fore position = "fore"
@@ -71,6 +58,32 @@ type game struct {
 	gid gameID
 }
 
+func (p *player) id() string {
+	return p.sock.Request().RemoteAddr
+}
+func (p *player) logReceiveFail() {
+	log.Printf("- game %s - %s couldn't receivp.", p.g.gid, p.id())
+}
+func (p *player) logConnect() {
+	log.Printf("- game %s - %s connected", p.g.gid, p.id())
+}
+func (p *player) logSendFail() {
+	log.Printf("- game %s - %s couldn't send.", p.g.gid, p.id())
+
+}
+func (p *player) logDisconnected() {
+	log.Printf("- game %s - %s disconnected", p.g.gid, p.id())
+}
+func (p *player) logMessage(msg error) {
+	log.Printf("- game %s - %s error %s", p.g.gid, p.id(), msg)
+}
+func (p *player) logGot(msg interface{}) {
+	log.Printf("- game %s - %s <- \"%s\"", p.g.gid, p.id(), msg)
+}
+func (p *player) logPut(msg interface{}) {
+	log.Printf("- game %s - %s -> \"%s\"", p.g.gid, p.id(), msg)
+}
+
 func newGame(gid gameID) *game {
 	g := game{
 		players: make(map[position]*player),
@@ -79,14 +92,14 @@ func newGame(gid gameID) *game {
 	fore := player{
 		pos: Fore,
 		buf: bytes.NewBuffer([]byte{}),
-		me: nil,
+		sock: nil,
 		g: &g,
 	}
 	g.players[Fore] = &fore
 	aft := player{
 		pos: Aft,
 		buf: bytes.NewBuffer([]byte{}),
-		me: nil,
+		sock: nil,
 		g: &g,
 	}
 	g.players[Aft] = &aft
@@ -99,8 +112,8 @@ func (g *game) aft() *player {
 	return g.players[Aft]
 }
 func (g *game) gameFull() bool {
-	return !(g.players[Fore].me == nil) &&
-		!(g.players[Aft].me == nil)
+	return !(g.players[Fore].sock == nil) &&
+		!(g.players[Aft].sock == nil)
 }
 func rejectVisitor(sock *ws.Conn) {
 	me := createMultiEchoConn(sock)
@@ -118,7 +131,7 @@ func rejectVisitor(sock *ws.Conn) {
 }
 
 type player struct {
-	me  *multiEcho
+	sock *ws.Conn
 	pos position
 	buf *bytes.Buffer
 	g *game
@@ -144,12 +157,11 @@ func (g *game) register(sock *ws.Conn) {
 	
 	var chosenPlayer *player
 	for _, p := range g.players {
-		if p.me == nil {
+		if p.sock == nil {
 			chosenPlayer = p
 		}
 	}
-	me := createMultiEchoConn(sock)
-	chosenPlayer.me = me
+	chosenPlayer.sock = sock
 	g.receive(chosenPlayer)
 }
 
@@ -172,21 +184,21 @@ type gameState struct {
 
 func (g *game) receive(p *player) {
 	//TODO: make multiEcho into player, including position, add to logging
-	p.me.log.connect()
+	p.logConnect()
 
 	var message keypress
 	for {
-		err := ws.JSON.Receive(p.me.ws, &message)
+		err := ws.JSON.Receive(p.sock, &message)
 		if err != nil {
-			p.me.log.message(err)
-			p.me.log.receiveFail()
-			p.me.ws.Close()
-			p.me.log.disconnected()
+			p.logMessage(err)
+			p.logReceiveFail()
+			p.sock.Close()
+			p.logDisconnected()
 			p.onClose()
 			g.broadcast()
 			break
 		}
-		p.me.log.got(message)
+		p.logGot(message)
 		g.integrate(p, message)
 	}
 }
@@ -214,7 +226,7 @@ func (g *game) interpret(p *player, kp keypress) {
 
 }
 func (p *player) onClose() {
-	p.me = nil
+	p.sock = nil
 }
 func (g *game) gameState(p *player) gameState{
 	o := g.otherPlayer(p.pos)
@@ -232,16 +244,16 @@ func (g *game) gameState(p *player) gameState{
 }
 func (g *game) broadcast() {
 	for _, p := range g.players {
-		if p.me == nil {
+		if p.sock == nil {
 			continue;
 		}
-		p.me.log.put(p.buf.String())
-		err := ws.JSON.Send(p.me.ws, g.gameState(p))
+		p.logPut(p.buf.String())
+		err := ws.JSON.Send(p.sock, g.gameState(p))
 		if err != nil {
-			p.me.log.message(err)
-			p.me.log.sendFail()
-			p.me.ws.Close()
-			p.me.log.disconnected()
+			p.logMessage(err)
+			p.logSendFail()
+			p.sock.Close()
+			p.logDisconnected()
 			p.onClose()
 		}
 	}
