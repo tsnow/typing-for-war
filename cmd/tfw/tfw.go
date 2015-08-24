@@ -266,31 +266,19 @@ func bufferServer(sock *ws.Conn) {
 }
 type gameID string
 var games map[gameID]*game
-func nextGameID() gameID{
-	gameid := int64(0)
-	for i, _ := range games {
-		gid, err := strconv.ParseInt(string(i), 10, 64)
-		if gid > gameid && err == nil {
-			gameid = gid
-		}
-	}
-	return gameID(strconv.FormatInt(gameid + 1, 10))
-}
 func parseGamePath(url string) *game{
 	gid := gameID(strings.TrimPrefix(url, gameRootPath()))
 	return games[gid]
 }
-func buildGamePath(gid gameID) string{
-	return gameRootPath() + string(gid)
+func buildGamePath(gid string) string{
+	return gameRootPath() + gid
 }
 var mutex = &sync.Mutex{}
-func nextGame() gameID{
+func createGame(name string){
 	mutex.Lock()
-	gid := nextGameID()
+	gid := gameID(name)
 	games[gid] = newGame(gid)
 	mutex.Unlock()
-	return gid
-
 }
 func gameRootPath() string{
 	return "/game/"

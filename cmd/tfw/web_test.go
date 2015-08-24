@@ -58,7 +58,8 @@ func verifyReceive(t *testing.T, gid string, conn *ws.Conn, msg []byte) {
 func TestGameBackspace(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
-	g := nextGame()
+	g := "backspace"
+	createGame(g)
 	conn1 := createClient(t, buildGamePath(g))
 	if conn1 == nil {
 		return
@@ -96,7 +97,8 @@ func TestGameBackspace(t *testing.T) {
 func TestGameReconnectConn(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
-	g := nextGame()
+	g:= "reconnect"
+	createGame(g)
 	conn1 := createClient(t, buildGamePath(g))
 	if conn1 == nil {
 		return
