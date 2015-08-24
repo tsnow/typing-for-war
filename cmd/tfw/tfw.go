@@ -18,34 +18,34 @@ func init() {
 	log.Println("starting typing-for-war...")
 }
 
-type echolog struct {
+type visitor struct {
 	sock *ws.Conn
 }
 
-func (e echolog) id() string {
-	return e.sock.Request().RemoteAddr
+func (v visitor) id() string {
+	return v.sock.Request().RemoteAddr
 }
-func (e echolog) receiveFail() {
-	log.Printf("- %s couldn't receive.", e.id())
+func (v visitor) logReceiveFail() {
+	log.Printf("- %s couldn't receivv.", v.id())
 }
-func (e echolog) connect() {
-	log.Printf("- %s connected", e.id())
+func (v visitor) logConnect() {
+	log.Printf("- %s connected", v.id())
 }
-func (e echolog) sendFail() {
-	log.Printf("- %s couldn't send.", e.id())
+func (v visitor) logSendFail() {
+	log.Printf("- %s couldn't send.", v.id())
 
 }
-func (e echolog) disconnected() {
-	log.Printf("- %s disconnected", e.id())
+func (v visitor) logDisconnected() {
+	log.Printf("- %s disconnected", v.id())
 }
-func (e echolog) message(msg error) {
-	log.Printf("- %s error %s", e.id(), msg)
+func (v visitor) logMessage(msg error) {
+	log.Printf("- %s error %s", v.id(), msg)
 }
-func (e echolog) got(msg interface{}) {
-	log.Printf("- %s <- \"%s\"", e.id(), msg)
+func (v visitor) logGot(msg interface{}) {
+	log.Printf("- %s <- \"%s\"", v.id(), msg)
 }
-func (e echolog) put(msg interface{}) {
-	log.Printf("- %s -> \"%s\"", e.id(), msg)
+func (v visitor) logPut(msg interface{}) {
+	log.Printf("- %s -> \"%s\"", v.id(), msg)
 }
 
 type position string
@@ -115,19 +115,17 @@ func (g *game) gameFull() bool {
 	return !(g.players[Fore].sock == nil) &&
 		!(g.players[Aft].sock == nil)
 }
-func rejectVisitor(sock *ws.Conn) {
-	me := createMultiEchoConn(sock)
-	//TODO: this is an example of a site visitor behavior.
-	me.log.connect()
-	err := ws.JSON.Send(me.ws, gameState{
+func (v visitor) reject() {
+	v.logConnect()
+	err := ws.JSON.Send(v.sock, gameState{
 		Status: NoGameAvailable,
 	})
 	if err != nil {
-		me.log.message(err)
-		me.log.sendFail()
+		v.logMessage(err)
+		v.logSendFail()
 	}
-	me.log.disconnected()
-	me.ws.Close()
+	v.logDisconnected()
+	v.sock.Close()
 }
 
 type player struct {
@@ -151,7 +149,7 @@ func (g *game) otherPlayer(pos position) *player {
 }
 func (g *game) register(sock *ws.Conn) {
 	if g.gameFull() {
-		rejectVisitor(sock)
+		visitor{sock}.reject()
 		return
 	}
 	
@@ -261,7 +259,7 @@ func (g *game) broadcast() {
 func bufferServer(sock *ws.Conn) {
 	g := parseGamePath(sock.Request().URL.Path)
 	if g == nil {
-		rejectVisitor(sock)
+		visitor{sock}.reject()
 		return 
 	}
 	g.register(sock)
