@@ -291,6 +291,7 @@ func releaseBufferServer() {
 
 func main() {
 	initBufferServer()
+	createGame("sparklemotion")
 	http.HandleFunc("/app/index", func(res http.ResponseWriter, req *http.Request) {
 		http.ServeFile(res, req, "/app/index.html") // /app/index.html for heroku
 	})
