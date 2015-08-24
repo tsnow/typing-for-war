@@ -26,13 +26,13 @@ func (v visitor) id() string {
 	return v.sock.Request().RemoteAddr
 }
 func (v visitor) logReceiveFail() {
-	log.Printf("- %s couldn't receivv.", v.id())
+	log.Printf("- %s couldn't receive", v.id())
 }
 func (v visitor) logConnect() {
 	log.Printf("- %s connected", v.id())
 }
 func (v visitor) logSendFail() {
-	log.Printf("- %s couldn't send.", v.id())
+	log.Printf("- %s couldn't send", v.id())
 
 }
 func (v visitor) logDisconnected() {
@@ -62,13 +62,13 @@ func (p *player) id() string {
 	return p.sock.Request().RemoteAddr
 }
 func (p *player) logReceiveFail() {
-	log.Printf("- game %s - %s couldn't receivp.", p.g.gid, p.id())
+	log.Printf("- game %s - %s couldn't receive", p.g.gid, p.id())
 }
 func (p *player) logConnect() {
 	log.Printf("- game %s - %s connected", p.g.gid, p.id())
 }
 func (p *player) logSendFail() {
-	log.Printf("- game %s - %s couldn't send.", p.g.gid, p.id())
+	log.Printf("- game %s - %s couldn't send", p.g.gid, p.id())
 
 }
 func (p *player) logDisconnected() {
