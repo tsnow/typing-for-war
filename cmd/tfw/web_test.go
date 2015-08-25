@@ -54,6 +54,47 @@ func verifyReceive(t *testing.T, gid string, conn *ws.Conn, msg []byte) {
 	}
 
 }
+func dontCreateGame(gid string){
+}
+func TestGameDoesntExist(t *testing.T) {
+	once.Do(startServer)
+	initBufferServer()
+	g := "doesnt_exist"
+	dontCreateGame(g)
+	conn1 := createClient(t, buildGamePath(g))
+	if conn1 == nil {
+		return
+	}
+	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":\"\",\"MyPlay\":\"\"}")
+	verifyReceive(t, g, conn1, h)
+	conn1.Close()
+	releaseBufferServer()
+}
+
+func TestGameFull(t *testing.T) {
+	once.Do(startServer)
+	initBufferServer()
+	g := "full_game"
+	createGame(g)
+	conn1 := createClient(t, buildGamePath(g))
+	if conn1 == nil {
+		return
+	}
+	conn2 := createClient(t, buildGamePath(g))
+	if conn2 == nil {
+		return
+	}
+	conn3 := createClient(t, buildGamePath(g))
+	if conn3 == nil {
+		return
+	}
+	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":\"\",\"MyPlay\":\"\"}")
+	verifyReceive(t, g, conn3, h)
+	conn1.Close()
+	conn2.Close()
+	conn3.Close()
+	releaseBufferServer()
+}
 
 func TestGameBackspace(t *testing.T) {
 	once.Do(startServer)

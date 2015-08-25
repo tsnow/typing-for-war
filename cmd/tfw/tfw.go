@@ -33,7 +33,9 @@ func (v visitor) logConnect() {
 }
 func (v visitor) logSendFail() {
 	log.Printf("- %s couldn't send", v.id())
-
+}
+func (v visitor) logNoGameAvailable() {
+	log.Printf("- %s no_game_available", v.id())
 }
 func (v visitor) logDisconnected() {
 	log.Printf("- %s disconnected", v.id())
@@ -117,6 +119,7 @@ func (g *game) gameFull() bool {
 }
 func (v visitor) reject() {
 	v.logConnect()
+	v.logNoGameAvailable()
 	err := ws.JSON.Send(v.sock, gameState{
 		Status: NoGameAvailable,
 	})
