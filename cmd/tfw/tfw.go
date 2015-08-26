@@ -177,6 +177,8 @@ const WaitingForOpponent status = "waiting_for_opponent"
 const NoGameAvailable status = "no_games_available"
 const Gaming status = "gaming"
 
+type playState [3]string
+
 type gameState struct {
 	Status status
 	OpponentPlay string
@@ -242,6 +244,9 @@ func (g *game) gameState(p *player) gameState{
 		OpponentPlay: o.buf.String(),
 		MyPlay: p.buf.String(),
 	}
+}
+func goodBadLeft(objective string, attempt string) playState{
+	return playState{objective, attempt, ""}
 }
 func (g *game) broadcast() {
 	for _, p := range g.players {
