@@ -62,32 +62,32 @@ func TestGoodBadLeft(t *testing.T) {
 	msg = playState{"","",""}
 	actual_msg = goodBadLeft("", "")
 	if msg != actual_msg {
-		t.Errorf("GoodBadLeft: expected %q got %q", msg, actual_msg)
+		t.Errorf("GoodBadLeft ',': expected %q got %q", msg, actual_msg)
 	}
 	msg = playState{"","1",""}
 	actual_msg = goodBadLeft("", "1")
 	if msg != actual_msg {
-		t.Errorf("GoodBadLeft: expected %q got %q", msg, actual_msg)
+		t.Errorf("GoodBadLeft ',1': expected %q got %q", msg, actual_msg)
 	}
 	msg = playState{"","","1"}
 	actual_msg = goodBadLeft("1", "")
 	if msg != actual_msg {
-		t.Errorf("GoodBadLeft: expected %q got %q", msg, actual_msg)
+		t.Errorf("GoodBadLeft '1,': expected %q got %q", msg, actual_msg)
 	}
 	msg = playState{"1","",""}
 	actual_msg = goodBadLeft("1", "1")
 	if msg != actual_msg {
-		t.Errorf("GoodBadLeft: expected %q got %q", msg, actual_msg)
+		t.Errorf("GoodBadLeft '1,1': expected %q got %q", msg, actual_msg)
 	}
 	msg = playState{"","2","1"}
 	actual_msg = goodBadLeft("1", "2")
 	if msg != actual_msg {
-		t.Errorf("GoodBadLeft: expected %q got %q", msg, actual_msg)
+		t.Errorf("GoodBadLeft '1,2': expected %q got %q", msg, actual_msg)
 	}
 	msg = playState{"1","","2"}
 	actual_msg = goodBadLeft("12", "1")
 	if msg != actual_msg {
-		t.Errorf("GoodBadLeft: expected %q got %q", msg, actual_msg)
+		t.Errorf("GoodBadLeft '12,1': expected %q got %q", msg, actual_msg)
 	}
 }
 func TestGameDoesntExist(t *testing.T) {
