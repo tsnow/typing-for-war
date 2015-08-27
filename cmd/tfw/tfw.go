@@ -246,17 +246,27 @@ func (g *game) gameState(p *player) gameState{
 	}
 }
 func goodBadLeft(objective string, attempt string) playState{
-	if (objective == ""){
-		return playState{objective, attempt, ""}
+	good := bytes.Buffer{}
+	bad := bytes.Buffer{}
+	left := bytes.Buffer{}
+	furthest := -1
+	for i := 0; i < len(attempt); i++ {
+		furthest = i
+		if(i == len(objective)){ // e.g. we've gone beyond the objective characters
+			bad.WriteString(attempt[i:])
+			break;
+		}
+		if(attempt[i] != objective[i]){
+			bad.WriteString(attempt[i:])
+			left.WriteString(objective[i:])
+			break;
+		}
+		good.WriteByte(attempt[i])
 	}
-	if (attempt == ""){
-		return playState{"", attempt, objective}
+	if bad.Len() == 0 && left.Len() == 0 && (furthest + 1) < len(objective) {
+		left.WriteString(objective[(furthest + 1):])
 	}
-	if (attempt == objective){
-		return playState{attempt, "", ""}
-	}
-	
-	return playState{objective, attempt, ""}
+	return playState{good.String(), bad.String(), left.String()}
 }
 func (g *game) broadcast() {
 	for _, p := range g.players {
