@@ -246,6 +246,12 @@ func (g *game) gameState(p *player) gameState{
 	}
 }
 func goodBadLeft(objective string, attempt string) playState{
+	if (objective == ""){
+		return playState{objective, attempt, ""}
+	}
+	if (attempt == ""){
+		return playState{"", attempt, objective}
+	}
 	return playState{objective, attempt, ""}
 }
 func (g *game) broadcast() {
