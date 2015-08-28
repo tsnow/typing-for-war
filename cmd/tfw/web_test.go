@@ -89,6 +89,11 @@ func TestGoodBadLeft(t *testing.T) {
 	if msg != actual_msg {
 		t.Errorf("GoodBadLeft '12,1': expected %q got %q", msg, actual_msg)
 	}
+	msg = playState{"bobwehadababy","ts","itsaboy"}
+	actual_msg = goodBadLeft("bobwehadababyitsaboy", "bobwehadababyts")
+	if msg != actual_msg {
+		t.Errorf("GoodBadLeft 'bobwehadababyitsaboy,bobwehadababyts': expected %q got %q", msg, actual_msg)
+	}
 }
 func TestGameDoesntExist(t *testing.T) {
 	once.Do(startServer)
