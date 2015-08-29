@@ -104,7 +104,7 @@ func TestGameDoesntExist(t *testing.T) {
 	if conn1 == nil {
 		return
 	}
-	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":\"\",\"MyPlay\":\"\"}")
+	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\"}")
 	verifyReceive(t, g, conn1, h)
 	conn1.Close()
 	releaseBufferServer()
