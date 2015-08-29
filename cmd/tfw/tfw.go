@@ -241,11 +241,11 @@ func (g *game) gameState(p *player) gameState{
 	}
 	return gameState{
 		Status: state,
-		OpponentPlay: o.buf.String(),
-		MyPlay: p.buf.String(),
+		OpponentPlay: GoodBadLeft(g.objective, o.buf.String()),
+		MyPlay: GoodBadLeft(g.objective, p.buf.String()),
 	}
 }
-func goodBadLeft(objective string, attempt string) playState{
+func GoodBadLeft(objective string, attempt string) playState{
 	good := bytes.Buffer{}
 	bad := bytes.Buffer{}
 	left := bytes.Buffer{}
