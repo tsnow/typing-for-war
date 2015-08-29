@@ -58,6 +58,7 @@ const Aft position = "aft"
 type game struct {
 	players map[position]*player
 	gid gameID
+	objective string // TODO: Create objective struct and implement and test operations against it. (compare, partition_play{correct,wrong,left}, completed, list_of_errors.) 
 }
 
 func (p *player) id() string {
@@ -86,10 +87,11 @@ func (p *player) logPut(msg interface{}) {
 	log.Printf("- game %s - %s -> \"%s\"", p.g.gid, p.id(), msg)
 }
 
-func newGame(gid gameID) *game {
+func newGame(gid gameID, objective string) *game {
 	g := game{
 		players: make(map[position]*player),
 		gid: gid,
+		objective: objective,
 	}
 	fore := player{
 		pos: Fore,
@@ -181,12 +183,12 @@ type playState [3]string
 
 type gameState struct {
 	Status status
-	OpponentPlay string
-	MyPlay string
+	OpponentPlay playState
+	MyPlay playState
+	Objective string
 }
 
 func (g *game) receive(p *player) {
-	//TODO: make multiEcho into player, including position, add to logging
 	p.logConnect()
 
 	var message keypress
@@ -243,6 +245,7 @@ func (g *game) gameState(p *player) gameState{
 		Status: state,
 		OpponentPlay: GoodBadLeft(g.objective, o.buf.String()),
 		MyPlay: GoodBadLeft(g.objective, p.buf.String()),
+		Objective: g.objective,
 	}
 }
 func GoodBadLeft(objective string, attempt string) playState{
@@ -303,10 +306,10 @@ func buildGamePath(gid string) string{
 	return gameRootPath() + gid
 }
 var mutex = &sync.Mutex{}
-func createGame(name string){
+func createGame(name string, objective string){
 	mutex.Lock()
 	gid := gameID(name)
-	games[gid] = newGame(gid)
+	games[gid] = newGame(gid, objective)
 	mutex.Unlock()
 }
 func gameRootPath() string{
@@ -320,7 +323,7 @@ func releaseBufferServer() {
 
 func main() {
 	initBufferServer()
-	createGame("sparklemotion")
+	createGame("sparklemotion","cry havok and let slip the dogs of war")
 	http.HandleFunc("/app/index", func(res http.ResponseWriter, req *http.Request) {
 		http.ServeFile(res, req, "/app/index.html") // /app/index.html for heroku
 	})

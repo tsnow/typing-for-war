@@ -114,7 +114,7 @@ func TestGameFull(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
 	g := "full_game"
-	createGame(g)
+	createGame(g, "")
 	conn1 := createClient(t, buildGamePath(g))
 	if conn1 == nil {
 		return
@@ -139,7 +139,7 @@ func TestGameBackspace(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
 	g := "backspace"
-	createGame(g)
+	createGame(g, "")
 	conn1 := createClient(t, buildGamePath(g))
 	if conn1 == nil {
 		return
@@ -178,7 +178,7 @@ func TestGameReconnectConn(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
 	g:= "reconnect"
-	createGame(g)
+	createGame(g, "")
 	conn1 := createClient(t, buildGamePath(g))
 	if conn1 == nil {
 		return
