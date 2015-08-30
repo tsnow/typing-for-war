@@ -52,48 +52,8 @@ func verifyReceive(t *testing.T, gid string, conn *ws.Conn, msg []byte) {
 	if !bytes.Equal(msg, actual_msg) {
 		t.Errorf("Echo: %s expected \n%q\n got \n%q", gid, msg, actual_msg)
 	}
-
 }
 func dontCreateGame(gid string){
-}
-
-func TestGoodBadLeft(t *testing.T) {
-	var msg, actual_msg playState
-	msg = playState{"","",""}
-	actual_msg = GoodBadLeft("", "")
-	if msg != actual_msg {
-		t.Errorf("GoodBadLeft ',': expected %q got %q", msg, actual_msg)
-	}
-	msg = playState{"","1",""}
-	actual_msg = GoodBadLeft("", "1")
-	if msg != actual_msg {
-		t.Errorf("GoodBadLeft ',1': expected %q got %q", msg, actual_msg)
-	}
-	msg = playState{"","","1"}
-	actual_msg = GoodBadLeft("1", "")
-	if msg != actual_msg {
-		t.Errorf("GoodBadLeft '1,': expected %q got %q", msg, actual_msg)
-	}
-	msg = playState{"1","",""}
-	actual_msg = GoodBadLeft("1", "1")
-	if msg != actual_msg {
-		t.Errorf("GoodBadLeft '1,1': expected %q got %q", msg, actual_msg)
-	}
-	msg = playState{"","2","1"}
-	actual_msg = GoodBadLeft("1", "2")
-	if msg != actual_msg {
-		t.Errorf("GoodBadLeft '1,2': expected %q got %q", msg, actual_msg)
-	}
-	msg = playState{"1","","2"}
-	actual_msg = GoodBadLeft("12", "1")
-	if msg != actual_msg {
-		t.Errorf("GoodBadLeft '12,1': expected %q got %q", msg, actual_msg)
-	}
-	msg = playState{"bobwehadababy","ts","itsaboy"}
-	actual_msg = GoodBadLeft("bobwehadababyitsaboy", "bobwehadababyts")
-	if msg != actual_msg {
-		t.Errorf("GoodBadLeft 'bobwehadababyitsaboy,bobwehadababyts': expected %q got %q", msg, actual_msg)
-	}
 }
 func TestGameDoesntExist(t *testing.T) {
 	once.Do(startServer)
