@@ -323,7 +323,7 @@ func releaseBufferServer() {
 
 func main() {
 	initBufferServer()
-	createGame("sparklemotion","cry havok and let slip the dogs of war")
+	createGame("sparklemotion","CRY HAVOK AND LET SLIP THE DOGS OF WAR")
 	http.HandleFunc("/app/index", func(res http.ResponseWriter, req *http.Request) {
 		http.ServeFile(res, req, "/app/index.html") // /app/index.html for heroku
 	})

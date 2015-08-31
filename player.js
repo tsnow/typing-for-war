@@ -17,7 +17,7 @@ $(document).ready(function(){
     player.prototype = {
 	"ticker": function(){
 	    var that=this;
-	    that.container.find(".ticker").text(that.tickerData);
+	    that.container.find(".ticker").html(that.tickerData);
 	},
 	"registerSocket": function(){
 	    var that=this;
@@ -30,6 +30,7 @@ $(document).ready(function(){
 		}
 		
 		that.websocket.onmessage = function(msg){
+		    that.onGameStateUpdate(msg.data);
 		    that.message('<p class="message"> ' + that.name + ' Received: '+msg.data);
 		}
 		
@@ -43,6 +44,22 @@ $(document).ready(function(){
 		that.message('<p> ' + that.name + ' Error'+exception);
 	    }
 	    
+	},
+	"onGameStateUpdate": function(msg){
+	    var that = this;
+	    try {
+		var gameState = JSON.parse(msg);
+	    } catch(e) {
+		console.log(msg);
+		console.log(e);
+		return;
+	    }
+	    that.tickerData = '';
+	    that.tickerData = that.tickerData + '<p class="warning">Game State: '+gameState.Status+'</p>';
+	    that.tickerData = that.tickerData + '<p class="warning">Objective: '+gameState.Objective+'</p>';
+	    that.tickerData = that.tickerData + '<p class="event">Opponent: '+gameState.OpponentPlay.join('|')+'</p>';
+	    that.tickerData = that.tickerData + '<p class="message">Yourself: '+gameState.MyPlay.join('|')+'</p>';
+	    that.ticker();
 	},
 	"registerContainer": function(){
 	    var that=this;
