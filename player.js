@@ -6,9 +6,6 @@ $(document).ready(function(){
 	this.host = host;
 	this.tickerData="";
 	try{
-	    var websocket = new WebSocket(host);
-	    this.websocket = websocket;
-	    this.registerSocket();
 	    this.registerContainer();
 	} catch(exception){
 	    this.message('<p>LoadError '+exception);
@@ -21,6 +18,8 @@ $(document).ready(function(){
 	},
 	"registerSocket": function(){
 	    var that=this;
+	    var websocket = new WebSocket(host);
+	    this.websocket = websocket;
 	    try{
 		
 		that.message('<p class="event"> ' + that.name +' Socket Status: '+that.websocket.readyState);
@@ -54,12 +53,24 @@ $(document).ready(function(){
 		console.log(e);
 		return;
 	    }
+	    if(gameState.Status === "gaming"){
+		that.container.find("#chatLog").hide();
+	    } else {
+		that.container.find("#chatLog").show();
+	    }
 	    that.tickerData = '';
-	    that.tickerData = that.tickerData + '<p class="warning">Game State: '+gameState.Status+'</p>';
+	    that.tickerData = that.tickerData + '<p class="warning">Game State: '+gameState.Status+'-'+gameState.Clock+'</p>';
 	    that.tickerData = that.tickerData + '<p class="warning">Objective: '+gameState.Objective+'</p>';
 	    that.tickerData = that.tickerData + '<p class="event">Opponent: '+gameState.OpponentPlay.join('|')+'</p>';
 	    that.tickerData = that.tickerData + '<p class="message">Yourself: '+gameState.MyPlay.join('|')+'</p>';
 	    that.ticker();
+	},
+	"connect": function(){
+	    this.registerSocket();
+	},
+	"disconnect": function(){
+	    this.websocket.close();
+	    this.websocket = undefined;
 	},
 	"registerContainer": function(){
 	    var that=this;
@@ -83,7 +94,13 @@ $(document).ready(function(){
 	    };
 	    that.container.find('#text').keydown(handler('down')).keypress(handler('press')).keyup(handler('up'));
 	    that.container.find('#disconnect').click(function(){
-		that.websocket.close();
+		if(that.websocket == undefined){
+		    that.connect();
+		    that.container.find('#disconnect').text("Disconnect");
+		}else{
+		    that.disconnect();
+		    that.container.find('#disconnect').text("Connect");
+		}
 	    });
 	},
 	"send": function(text){

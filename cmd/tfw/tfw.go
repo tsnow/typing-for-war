@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	//	"time"
+	"time"
 )
 
 func init() {
@@ -59,6 +59,7 @@ type game struct {
 	players map[position]*player
 	gid gameID
 	objective string // TODO: Create objective struct and implement and test operations against it. (compare, partition_play{correct,wrong,left}, completed, list_of_errors.) 
+	clock int
 }
 
 func (p *player) id() string {
@@ -92,6 +93,7 @@ func newGame(gid gameID, objective string) *game {
 		players: make(map[position]*player),
 		gid: gid,
 		objective: objective,
+		clock: -10,
 	}
 	fore := player{
 		pos: Fore,
@@ -165,6 +167,7 @@ func (g *game) register(sock *ws.Conn) {
 		}
 	}
 	chosenPlayer.sock = sock
+	g.broadcast()
 	g.receive(chosenPlayer)
 }
 
@@ -178,6 +181,8 @@ type status string
 const WaitingForOpponent status = "waiting_for_opponent"
 const NoGameAvailable status = "no_games_available"
 const Gaming status = "gaming"
+const GameStarting status = "game_starting"
+const GameOver status = "game_over"
 
 type playState [3]string
 
@@ -186,6 +191,7 @@ type gameState struct {
 	OpponentPlay playState
 	MyPlay playState
 	Objective string
+	Clock int
 }
 
 func (g *game) receive(p *player) {
@@ -236,8 +242,12 @@ func (p *player) onClose() {
 func (g *game) gameState(p *player) gameState{
 	o := g.otherPlayer(p.pos)
 	var state status
-	if g.gameFull(){
+	if g.gameFull() && g.clock < 0 {
+		state = GameStarting
+	} else if g.gameFull() && g.clock > 0 {
 		state = Gaming
+	} else if g.gameFull() && g.clock == 0 {
+		state = GameOver
 	} else {
 		state = WaitingForOpponent
 	}
@@ -246,6 +256,24 @@ func (g *game) gameState(p *player) gameState{
 		OpponentPlay: GoodBadLeft(g.objective, o.buf.String()),
 		MyPlay: GoodBadLeft(g.objective, p.buf.String()),
 		Objective: g.objective,
+		Clock: g.clock,
+	}
+}
+func (g *game) tick(){
+	if !g.gameFull() {
+		return // pause
+	}
+	if g.clock == 0 {
+		return // game over
+	} else if g.clock > 0 {
+		g.clock = g.clock - 1
+		g.broadcast()
+	} else if g.clock == -1 { // time to start
+		g.clock = 10
+		g.broadcast()
+	} else { // countdown to start
+		g.clock = g.clock + 1
+		g.broadcast()
 	}
 }
 func GoodBadLeft(objective string, attempt string) playState{
@@ -317,6 +345,16 @@ func gameRootPath() string{
 }
 func initBufferServer() {
 	games = make(map[gameID]*game)
+	go func(){
+		c := time.Tick(time.Second)
+		for _ = range c {
+			mutex.Lock()
+			for _, game := range games {
+				game.tick()
+			}
+			mutex.Unlock()
+		}
+	}()
 }
 func releaseBufferServer() {
 }
