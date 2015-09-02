@@ -44,6 +44,11 @@ $(document).ready(function(){
 	    }
 	    
 	},
+	"playDisplay": function(playState){
+	    return '<span class="playCorrect">'+playState[0]+'</span>'+
+		'<span class="playWrong">'+playState[1]+'</span>'+
+		'<span class="playLeft">'+playState[2]+'</span>';
+	},
 	"onGameStateUpdate": function(msg){
 	    var that = this;
 	    try {
@@ -61,8 +66,8 @@ $(document).ready(function(){
 	    that.tickerData = '';
 	    that.tickerData = that.tickerData + '<p class="warning">Game State: '+gameState.Status+'-'+gameState.Clock+'</p>';
 	    that.tickerData = that.tickerData + '<p class="warning">Objective: '+gameState.Objective+'</p>';
-	    that.tickerData = that.tickerData + '<p class="event">Opponent: '+gameState.OpponentPlay.join('|')+'</p>';
-	    that.tickerData = that.tickerData + '<p class="message">Yourself: '+gameState.MyPlay.join('|')+'</p>';
+	    that.tickerData = that.tickerData + '<p class="event">Opponent: '+that.playDisplay(gameState.OpponentPlay)+'</p>';
+	    that.tickerData = that.tickerData + '<p class="message">Yourself: '+that.playDisplay(gameState.MyPlay)+'</p>';
 	    that.ticker();
 	},
 	"connect": function(){
