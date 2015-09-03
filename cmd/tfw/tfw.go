@@ -100,6 +100,7 @@ func newGame(gid gameID, objective string) *game {
 		buf: bytes.NewBuffer([]byte{}),
 		sock: nil,
 		g: &g,
+		endTime: -1,
 	}
 	g.players[Fore] = &fore
 	aft := player{
@@ -107,6 +108,7 @@ func newGame(gid gameID, objective string) *game {
 		buf: bytes.NewBuffer([]byte{}),
 		sock: nil,
 		g: &g,
+		endTime: -1,
 	}
 	g.players[Aft] = &aft
 	return &g
@@ -140,6 +142,8 @@ type player struct {
 	pos position
 	buf *bytes.Buffer
 	g *game
+	points int
+	endTime int
 }
 
 func (g *game) getPlayer(pos position) *player {
@@ -183,6 +187,8 @@ const NoGameAvailable status = "no_games_available"
 const Gaming status = "gaming"
 const GameStarting status = "game_starting"
 const GameOver status = "game_over"
+const GameWon status = "game_won"
+const GameLost status = "game_lost"
 
 type playState [3]string
 
@@ -192,6 +198,7 @@ type gameState struct {
 	MyPlay playState
 	Objective string
 	Clock int
+	Points int
 }
 
 func (g *game) receive(p *player) {
@@ -214,6 +221,10 @@ func (g *game) receive(p *player) {
 	}
 }
 func (g *game) integrate(p *player, kp keypress) {
+	state := g.gameStatus(p)
+	if state != Gaming {
+		return
+	}
 	g.interpret(p, kp)
 	g.broadcast()
 }
@@ -239,9 +250,17 @@ func (g *game) interpret(p *player, kp keypress) {
 func (p *player) onClose() {
 	p.sock = nil
 }
-func (g *game) gameState(p *player) gameState{
+func (g *game) gameStatus(p *player) status {
 	o := g.otherPlayer(p.pos)
 	var state status
+	if p.endTime >= 0 && o.endTime >= 0 {
+		if p.points > o.points {
+			state = GameWon
+		} else {
+			state = GameLost
+		}
+		return state
+	}
 	if g.gameFull() && g.clock < 0 {
 		state = GameStarting
 	} else if g.gameFull() && g.clock > 0 {
@@ -251,13 +270,33 @@ func (g *game) gameState(p *player) gameState{
 	} else {
 		state = WaitingForOpponent
 	}
+	return state
+}
+func (g *game) gameState(p *player) gameState{
+	o := g.otherPlayer(p.pos)
+	state := g.gameStatus(p)
 	return gameState{
 		Status: state,
 		OpponentPlay: GoodBadLeft(g.objective, o.buf.String()),
 		MyPlay: GoodBadLeft(g.objective, p.buf.String()),
 		Objective: g.objective,
 		Clock: g.clock,
+		Points: p.points,
 	}
+}
+func (g *game) distributePoints(p *player){
+	p.endTime = g.clock
+	p.points = calcPoints(g.objective, p.buf.String()) + p.endTime
+}
+func calcPoints(objective string, attempt string) int {
+	gbl := GoodBadLeft(objective, attempt)
+	good := gbl[0]
+	bad := gbl[1]
+	out := len(good) - len(bad)
+	if out <= 0 {
+		return 0
+	}
+	return out
 }
 func (g *game) tick(){
 	if !g.gameFull() {
@@ -265,6 +304,13 @@ func (g *game) tick(){
 	}
 	if g.clock == 0 {
 		return // game over
+	} else if g.clock == 1 {
+		g.clock = g.clock - 1
+		fore := g.players[Fore]
+		g.distributePoints(fore)
+		aft := g.players[Aft]
+		g.distributePoints(aft)
+		g.broadcast()
 	} else if g.clock > 0 {
 		g.clock = g.clock - 1
 		g.broadcast()

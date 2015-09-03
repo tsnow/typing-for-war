@@ -64,7 +64,7 @@ $(document).ready(function(){
 		that.container.find("#chatLog").show();
 	    }
 	    that.tickerData = '';
-	    that.tickerData = that.tickerData + '<p class="warning">Game State: '+gameState.Status+'-'+gameState.Clock+'</p>';
+	    that.tickerData = that.tickerData + '<p class="warning">Game State: '+gameState.Status+' - '+gameState.Clock+' - Points: '+gameState.Points+'</p>';
 	    that.tickerData = that.tickerData + '<p class="warning">Objective: '+gameState.Objective+'</p>';
 	    that.tickerData = that.tickerData + '<p class="event">Opponent: '+that.playDisplay(gameState.OpponentPlay)+'</p>';
 	    that.tickerData = that.tickerData + '<p class="message">Yourself: '+that.playDisplay(gameState.MyPlay)+'</p>';
