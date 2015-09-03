@@ -225,7 +225,16 @@ func (g *game) integrate(p *player, kp keypress) {
 	if state != Gaming {
 		return
 	}
-	g.interpret(p, kp)
+	if completedGame(g.objective, p.buf.String()) {
+		// here there be attacks
+		o := g.otherPlayer(p.pos)
+		g.interpret(o, kp)
+	} else {
+		g.interpret(p, kp)
+	}
+	if p.endTime < 0 && completedGame(g.objective, p.buf.String()) {
+		g.distributePoints(p)
+	}
 	g.broadcast()
 }
 func (g *game) interpret(p *player, kp keypress) {
@@ -298,6 +307,15 @@ func calcPoints(objective string, attempt string) int {
 	}
 	return out
 }
+func completedGame(objective string, attempt string) bool {
+	gbl := GoodBadLeft(objective, attempt)
+	bad := gbl[1]
+	left := gbl[2]
+	if len(bad) + len(left) == 0 {
+		return true
+	}
+	return false
+}
 func (g *game) tick(){
 	if !g.gameFull() {
 		return // pause
@@ -307,9 +325,13 @@ func (g *game) tick(){
 	} else if g.clock == 1 {
 		g.clock = g.clock - 1
 		fore := g.players[Fore]
-		g.distributePoints(fore)
+		if fore.endTime < 0 {
+			g.distributePoints(fore)
+		}
 		aft := g.players[Aft]
-		g.distributePoints(aft)
+		if aft.endTime < 0 {
+			g.distributePoints(aft)
+		}
 		g.broadcast()
 	} else if g.clock > 0 {
 		g.clock = g.clock - 1
