@@ -1,1 +1,1 @@
-web: typing-for-war
+web: tfw
