@@ -46,14 +46,14 @@ func verifyReceive(t *testing.T, gid string, conn *ws.Conn, msg []byte) {
 
 	n, err := conn.Read(actual_msg)
 	if err != nil {
-		t.Errorf("Read: %s %v",gid, err)
+		t.Errorf("Read: %s %v", gid, err)
 	}
 	actual_msg = actual_msg[0:n]
 	if !bytes.Equal(msg, actual_msg) {
 		t.Errorf("Echo: %s expected \n%q\n got \n%q", gid, msg, actual_msg)
 	}
 }
-func dontCreateGame(gid string){
+func dontCreateGame(gid string) {
 }
 func TestGameDoesntExist(t *testing.T) {
 	once.Do(startServer)
@@ -133,6 +133,7 @@ func TestGameBackspace(t *testing.T) {
 	conn2.Close()
 	releaseBufferServer()
 }
+
 /*
 func TestGameReconnectConn(t *testing.T) {
 	once.Do(startServer)

@@ -56,10 +56,10 @@ const Fore position = "fore"
 const Aft position = "aft"
 
 type game struct {
-	players map[position]*player
-	gid gameID
-	objective string // TODO: Create objective struct and implement and test operations against it. (compare, partition_play{correct,wrong,left}, completed, list_of_errors.) 
-	clock int
+	players   map[position]*player
+	gid       gameID
+	objective string // TODO: Create objective struct and implement and test operations against it. (compare, partition_play{correct,wrong,left}, completed, list_of_errors.)
+	clock     int
 }
 
 func (p *player) id() string {
@@ -90,24 +90,24 @@ func (p *player) logPut(msg interface{}) {
 
 func newGame(gid gameID, objective string) *game {
 	g := game{
-		players: make(map[position]*player),
-		gid: gid,
+		players:   make(map[position]*player),
+		gid:       gid,
 		objective: objective,
-		clock: -10,
+		clock:     -10,
 	}
 	fore := player{
-		pos: Fore,
-		buf: bytes.NewBuffer([]byte{}),
-		sock: nil,
-		g: &g,
+		pos:     Fore,
+		buf:     bytes.NewBuffer([]byte{}),
+		sock:    nil,
+		g:       &g,
 		endTime: -1,
 	}
 	g.players[Fore] = &fore
 	aft := player{
-		pos: Aft,
-		buf: bytes.NewBuffer([]byte{}),
-		sock: nil,
-		g: &g,
+		pos:     Aft,
+		buf:     bytes.NewBuffer([]byte{}),
+		sock:    nil,
+		g:       &g,
 		endTime: -1,
 	}
 	g.players[Aft] = &aft
@@ -138,11 +138,11 @@ func (v visitor) reject() {
 }
 
 type player struct {
-	sock *ws.Conn
-	pos position
-	buf *bytes.Buffer
-	g *game
-	points int
+	sock    *ws.Conn
+	pos     position
+	buf     *bytes.Buffer
+	g       *game
+	points  int
 	endTime int
 }
 
@@ -163,7 +163,7 @@ func (g *game) register(sock *ws.Conn) {
 		visitor{sock}.reject()
 		return
 	}
-	
+
 	var chosenPlayer *player
 	for _, p := range g.players {
 		if p.sock == nil {
@@ -182,6 +182,7 @@ type keypress struct {
 }
 
 type status string
+
 const WaitingForOpponent status = "waiting_for_opponent"
 const NoGameAvailable status = "no_games_available"
 const Gaming status = "gaming"
@@ -193,12 +194,12 @@ const GameLost status = "game_lost"
 type playState [3]string
 
 type gameState struct {
-	Status status
+	Status       status
 	OpponentPlay playState
-	MyPlay playState
-	Objective string
-	Clock int
-	Points int
+	MyPlay       playState
+	Objective    string
+	Clock        int
+	Points       int
 }
 
 func (g *game) receive(p *player) {
@@ -250,7 +251,7 @@ func (g *game) interpret(p *player, kp keypress) {
 		oldbuf := p.buf.Bytes()
 		backOneChar := len(oldbuf) - 1
 		if len(oldbuf) == 0 {
-			backOneChar=0
+			backOneChar = 0
 		}
 		p.buf = bytes.NewBuffer(oldbuf[:backOneChar])
 	}
@@ -281,19 +282,19 @@ func (g *game) gameStatus(p *player) status {
 	}
 	return state
 }
-func (g *game) gameState(p *player) gameState{
+func (g *game) gameState(p *player) gameState {
 	o := g.otherPlayer(p.pos)
 	state := g.gameStatus(p)
 	return gameState{
-		Status: state,
+		Status:       state,
 		OpponentPlay: GoodBadLeft(g.objective, o.buf.String()),
-		MyPlay: GoodBadLeft(g.objective, p.buf.String()),
-		Objective: g.objective,
-		Clock: g.clock,
-		Points: p.points,
+		MyPlay:       GoodBadLeft(g.objective, p.buf.String()),
+		Objective:    g.objective,
+		Clock:        g.clock,
+		Points:       p.points,
 	}
 }
-func (g *game) distributePoints(p *player){
+func (g *game) distributePoints(p *player) {
 	p.endTime = g.clock
 	p.points = calcPoints(g.objective, p.buf.String()) + p.endTime
 }
@@ -311,12 +312,12 @@ func completedGame(objective string, attempt string) bool {
 	gbl := GoodBadLeft(objective, attempt)
 	bad := gbl[1]
 	left := gbl[2]
-	if len(bad) + len(left) == 0 {
+	if len(bad)+len(left) == 0 {
 		return true
 	}
 	return false
 }
-func (g *game) tick(){
+func (g *game) tick() {
 	if !g.gameFull() {
 		return // pause
 	}
@@ -344,25 +345,25 @@ func (g *game) tick(){
 		g.broadcast()
 	}
 }
-func GoodBadLeft(objective string, attempt string) playState{
+func GoodBadLeft(objective string, attempt string) playState {
 	good := bytes.Buffer{}
 	bad := bytes.Buffer{}
 	left := bytes.Buffer{}
 	furthest := -1
 	for i := 0; i < len(attempt); i++ {
 		furthest = i
-		if(i == len(objective)){ // e.g. we've gone beyond the objective characters
+		if i == len(objective) { // e.g. we've gone beyond the objective characters
 			bad.WriteString(attempt[i:])
-			break;
+			break
 		}
-		if(attempt[i] != objective[i]){
+		if attempt[i] != objective[i] {
 			bad.WriteString(attempt[i:])
 			left.WriteString(objective[i:])
-			break;
+			break
 		}
 		good.WriteByte(attempt[i])
 	}
-	if bad.Len() == 0 && left.Len() == 0 && (furthest + 1) < len(objective) {
+	if bad.Len() == 0 && left.Len() == 0 && (furthest+1) < len(objective) {
 		left.WriteString(objective[(furthest + 1):])
 	}
 	return playState{good.String(), bad.String(), left.String()}
@@ -370,7 +371,7 @@ func GoodBadLeft(objective string, attempt string) playState{
 func (g *game) broadcast() {
 	for _, p := range g.players {
 		if p.sock == nil {
-			continue;
+			continue
 		}
 		p.logPut(p.buf.String())
 		err := ws.JSON.Send(p.sock, g.gameState(p))
@@ -388,32 +389,37 @@ func bufferServer(sock *ws.Conn) {
 	g := parseGamePath(sock.Request().URL.Path)
 	if g == nil {
 		visitor{sock}.reject()
-		return 
+		return
 	}
 	g.register(sock)
 }
+
 type gameID string
+
 var games map[gameID]*game
-func parseGamePath(url string) *game{
+
+func parseGamePath(url string) *game {
 	gid := gameID(strings.TrimPrefix(url, gameRootPath()))
 	return games[gid]
 }
-func buildGamePath(gid string) string{
+func buildGamePath(gid string) string {
 	return gameRootPath() + gid
 }
+
 var mutex = &sync.Mutex{}
-func createGame(name string, objective string){
+
+func createGame(name string, objective string) {
 	mutex.Lock()
 	gid := gameID(name)
 	games[gid] = newGame(gid, objective)
 	mutex.Unlock()
 }
-func gameRootPath() string{
+func gameRootPath() string {
 	return "/game/"
 }
 func initBufferServer() {
 	games = make(map[gameID]*game)
-	go func(){
+	go func() {
 		c := time.Tick(time.Second)
 		for _ = range c {
 			mutex.Lock()
@@ -429,7 +435,7 @@ func releaseBufferServer() {
 
 func main() {
 	initBufferServer()
-	createGame("sparklemotion","CRY HAVOK AND LET SLIP THE DOGS OF WAR")
+	createGame("sparklemotion", "CRY HAVOK AND LET SLIP THE DOGS OF WAR")
 	http.HandleFunc("/app/index", func(res http.ResponseWriter, req *http.Request) {
 		http.ServeFile(res, req, "/app/index.html") // /app/index.html for heroku
 	})
