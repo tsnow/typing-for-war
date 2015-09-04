@@ -126,10 +126,11 @@ $(document).ready(function(){
 	}
     }
 
-    var host = 'ws://' + window.location.host + '/game/sparklemotion';
+    var host = '107.170.104.38'; //window.location.host
+    var ws =  'ws://' + host + '/game/sparklemotion';
     // var host = "ws://typing-for-war.herokuapp.com/game/sparklemotion";
     // var host = "ws://phaedo.local:5002/game/sparklemotion";
     // var host = "ws://localhost:5002/game/sparklemotion"; 
-    var player1 = new player('Player 1', host, $('.player1'));
-    var player2 = new player('Player 2', host, $('.player2'));
+    var player1 = new player('Player 1', ws, $('.player1'));
+    var player2 = new player('Player 2', ws, $('.player2'));
 });
