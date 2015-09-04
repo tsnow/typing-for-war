@@ -1,6 +1,6 @@
 WAIT=5
 ATTEMPTS=6
-/game/sparklemotion Upgrade
+#/game/sparklemotion Upgrade
 / body
 /player.js game
 /jquery-1.4.2.min.js
