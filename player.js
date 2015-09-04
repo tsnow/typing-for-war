@@ -126,7 +126,7 @@ $(document).ready(function(){
 	}
     }
 
-    var host = '107.170.104.38'; //window.location.host
+    var host = window.location.host;
     var ws =  'ws://' + host + '/game/sparklemotion';
     // var host = "ws://typing-for-war.herokuapp.com/game/sparklemotion";
     // var host = "ws://phaedo.local:5002/game/sparklemotion";
