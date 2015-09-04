@@ -126,7 +126,8 @@ $(document).ready(function(){
 	}
     }
 
-     var host = "ws://typing-for-war.herokuapp.com/game/sparklemotion";
+    var host = 'ws://' + window.location.host + '/game/sparklemotion';
+    // var host = "ws://typing-for-war.herokuapp.com/game/sparklemotion";
     // var host = "ws://phaedo.local:5002/game/sparklemotion";
     // var host = "ws://localhost:5002/game/sparklemotion"; 
     var player1 = new player('Player 1', host, $('.player1'));
