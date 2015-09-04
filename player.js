@@ -57,11 +57,6 @@
 		console.log(e);
 		return;
 	    }
-	    if(gameState.Status === "gaming"){
-		that.container.find("#chatLog").hide();
-	    } else {
-		that.container.find("#chatLog").show();
-	    }
 	    that.tickerData = '';
 	    that.tickerData = that.tickerData + '<p class="warning">Game State: '+gameState.Status+' - '+gameState.Clock+' - Points: '+gameState.Points+'</p>';
 	    that.tickerData = that.tickerData + '<p class="warning">Objective: '+gameState.Objective+'</p>';
@@ -106,6 +101,9 @@
 		    that.container.find('#disconnect').text("Connect");
 		}
 	    });
+	    that.container.find('.toggleDebugLog').click(function(){
+		that.toggleDebugLog();
+	    });
 	},
 	"send": function(text){
 	    if(text==""){
@@ -122,6 +120,16 @@
 	},
 	"message": function(msg){
 	    this.container.find('#chatLog').append(msg+'</p>');
+	},
+	"toggleDebugLog": function(){
+	    var that = this;
+	    if(that.debugLogShown == undefined || that.debugLogShown){
+		that.container.find("#chatLog").hide();
+		that.debugLogShown = false;
+	    } else {
+		that.container.find("#chatLog").show();
+		that.debugLogShown = true;
+	    }
 	}
     }
 
@@ -134,4 +142,6 @@ $(document).ready(function(){
     // var host = "ws://localhost:5002/game/sparklemotion"; 
     var player1 = new player('Player 1', ws, $('.player1'));
     var player2 = new player('Player 2', ws, $('.player2'));
+    player1.toggleDebugLog();
+    player2.toggleDebugLog();
 });
