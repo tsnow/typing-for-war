@@ -1,4 +1,3 @@
-$(document).ready(function(){
 
     var player = function(name,host,container){
 	this.container = container;
@@ -18,7 +17,7 @@ $(document).ready(function(){
 	},
 	"registerSocket": function(){
 	    var that=this;
-	    var websocket = new WebSocket(host);
+	    var websocket = new WebSocket(that.host);
 	    this.websocket = websocket;
 	    try{
 		
@@ -125,6 +124,8 @@ $(document).ready(function(){
 	    this.container.find('#chatLog').append(msg+'</p>');
 	}
     }
+
+$(document).ready(function(){
 
     var wshost = window.location.host;
     var ws =  'ws://' + wshost + '/game/sparklemotion';
