@@ -58,10 +58,13 @@
                 return;
             }
             that.tickerData = '';
-            that.tickerData = that.tickerData + '<p class="warning">Game State: '+gameState.Status+' - '+gameState.Clock+' - Points: '+gameState.Points+'</p>';
-            that.tickerData = that.tickerData + '<p class="warning">Objective: '+gameState.Objective+'</p>';
-            that.tickerData = that.tickerData + '<p class="event">Opponent: '+that.playDisplay(gameState.OpponentPlay)+'</p>';
-            that.tickerData = that.tickerData + '<p class="message">Yourself: '+that.playDisplay(gameState.MyPlay)+'</p>';
+            that.tickerData = that.tickerData + '<div class="event">Opponent: ['+that.playDisplay(gameState.OpponentPlay)+']</div>';
+	    that.tickerData = that.tickerData + '<hr />';
+            that.tickerData = that.tickerData + '<div class="warning">Game State: '+gameState.Status+' - '+gameState.Clock+' - Points: '+gameState.Points+'</div>';
+	    that.tickerData = that.tickerData + '<hr />';
+            //that.tickerData = that.tickerData + '<div class="warning">Objective: '+gameState.Objective+'</p>';
+
+            that.tickerData = that.tickerData + '<div class="message">CHALLENGE: ['+that.playDisplay(gameState.MyPlay)+']</div>';
             that.ticker();
         },
         "connect": function(){
@@ -91,18 +94,16 @@
                     }));
                 };
             };
-            that.container.find('#text').keydown(handler('down')).keypress(handler('press')).keyup(handler('up'));
+            that.container.keydown(handler('down')).keypress(handler('press')).keyup(handler('up'));
             that.container.find('#disconnect').click(function(){
                 if(that.websocket == undefined){
                     that.connect();
                     that.container.find('#disconnect').text("Disconnect");
+                    that.container.find('#text').focus();
                 }else{
                     that.disconnect();
                     that.container.find('#disconnect').text("Connect");
                 }
-            });
-            that.container.find('.toggleDebugLog').click(function(){
-                that.toggleDebugLog();
             });
         },
         "send": function(text){
@@ -125,9 +126,11 @@
             var that = this;
             if(that.debugLogShown == undefined || that.debugLogShown){
                 that.container.find("#chatLog").hide();
+                //that.container.find(".ticker").hide();
                 that.debugLogShown = false;
             } else {
                 that.container.find("#chatLog").show();
+                //that.container.find(".ticker").show();
                 that.debugLogShown = true;
             }
         }
@@ -144,4 +147,20 @@ $(document).ready(function(){
     var player2 = new player('Player 2', ws, $('.player2'));
     player1.toggleDebugLog();
     player2.toggleDebugLog();
+    var player2hidden = false;
+    var player2toggle = function(){
+        if(player2hidden){
+            player2.container.show();
+        }else{
+            player2.container.hide();
+        }
+        player2hidden = !player2hidden;
+    };
+    player2toggle();
+    $('.toggleDebugLog').click(function(){
+        player1.toggleDebugLog();
+        player2.toggleDebugLog();
+        player2toggle();
+    });
+
 });

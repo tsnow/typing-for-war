@@ -282,6 +282,14 @@ func (g *game) gameStatus(p *player) status {
 func (g *game) gameState(p *player) gameState {
 	o := g.otherPlayer(p.pos)
 	state := g.gameStatus(p)
+	switch state {
+	case GameStarting, WaitingForOpponent:
+		return gameState{
+			Status: state,
+			Clock:        g.clock,
+			Points:       p.points,
+		}
+	}
 	return gameState{
 		Status:       state,
 		OpponentPlay: GoodBadLeft(g.objective, o.buf.String()),

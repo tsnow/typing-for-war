@@ -38,28 +38,62 @@ color:#FD2828;
 .playLeft{
 font-weight:bold;
 }
+.playWrong::after{
+content:" ";
+}
+    .ticker{
+	display: flex;
+	flex-direction: column;
+    }
+.blinkCursor::after{
+content:"|";
+}
+    .container{
+	width: 75%;
+	margin-right: auto;
+	margin-left: auto;
+    }
+    .ticker div{
+	margin-right: auto;
+	margin-left: auto;
+    }
+.footer{
+    float: right;
+}
 </style>
 <script type="application/javascript" src="player.js">
+</script>
+<script type="application/javascript">
+    $(document).ready(function(){
+	var cursorOn = false;
+	setInterval(function(){
+	    if(cursorOn){
+		$('.playWrong').removeClass("blinkCursor");
+	    }else{
+		$('.playWrong').addClass("blinkCursor");
+	    }
+	    cursorOn = !cursorOn;
+	}, 530);
+    });
 </script>
 <title>Q=WAR=TY</title>
 
 </head>
 <body>
 <div id="wrapper">
-
+  <h1><span class="playCorrect">Q</span><span class="playWrong">war</span><span class="playLeft">TY</span></h1>
     <div class="container player1">
-        <h1 class="toggleDebugLog">Player #1</h1>
-        <label for="text">Game:</label>
-        <input id="text" type="text" />
-        <a id="disconnect">Connect</a>
+        <h3><a id="disconnect">Click Me to Play</a></h1>
         <div class="ticker"></div>
+        <label for="text"></label>
+        <input id="text" type="text" />
         <div id="chatLog">
         </div><!-- #chatLog -->
     </div><!-- #container -->
 
     <div class="container player2">
-        <h1 class="toggleDebugLog">Player #2</h1>
-        <label for="text">Game:</label>
+        <h3>Player #2</h1>
+        <label for="text">Type Here:</label>
         <input id="text" type="text" />
         <a id="disconnect">Connect</a>
         <div class="ticker"></div>
@@ -67,6 +101,9 @@ font-weight:bold;
         </div><!-- #chatLog -->
     </div><!-- #container -->
 
+</div>
+<div id="footer">
+    <div class="toggleDebugLog">DEBUG</div>
 </div>
 </body>
 </html>
