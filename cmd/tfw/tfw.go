@@ -93,24 +93,20 @@ func newGame(gid gameID, objective string) *game {
 		players:   make(map[position]*player),
 		gid:       gid,
 		objective: objective,
-		clock:     -10,
 	}
 	fore := player{
 		pos:     Fore,
-		buf:     bytes.NewBuffer([]byte{}),
 		sock:    nil,
 		g:       &g,
-		endTime: -1,
 	}
 	g.players[Fore] = &fore
 	aft := player{
 		pos:     Aft,
-		buf:     bytes.NewBuffer([]byte{}),
 		sock:    nil,
 		g:       &g,
-		endTime: -1,
 	}
 	g.players[Aft] = &aft
+	g.resetGame()
 	return &g
 }
 func (g *game) fore() *player {
@@ -144,6 +140,7 @@ type player struct {
 	g       *game
 	points  int
 	endTime int
+	playerName string
 }
 
 func (g *game) getPlayer(pos position) *player {
@@ -296,7 +293,7 @@ func (g *game) gameState(p *player) gameState {
 }
 func (g *game) distributePoints(p *player) {
 	p.endTime = g.clock
-	p.points = calcPoints(g.objective, p.buf.String()) + p.endTime
+	p.points = p.points + calcPoints(g.objective, p.buf.String()) + p.endTime
 }
 func calcPoints(objective string, attempt string) int {
 	gbl := GoodBadLeft(objective, attempt)
@@ -321,10 +318,9 @@ func (g *game) tick() {
 	if !g.gameFull() {
 		return // pause
 	}
-	if g.clock == 0 {
-		return // game over
-	} else if g.clock == 1 {
-		g.clock = g.clock - 1
+	if g.clock == 0 { //not gaming
+		return //Shouldn't be reachable
+	} else if g.clock == 1 { //game done
 		fore := g.players[Fore]
 		if fore.endTime < 0 {
 			g.distributePoints(fore)
@@ -333,6 +329,7 @@ func (g *game) tick() {
 		if aft.endTime < 0 {
 			g.distributePoints(aft)
 		}
+		g.resetGame()
 		g.broadcast()
 	} else if g.clock > 0 {
 		g.clock = g.clock - 1
@@ -345,6 +342,14 @@ func (g *game) tick() {
 		g.broadcast()
 	}
 }
+func (g *game) resetGame(){
+	g.clock = -10
+	g.players[Fore].buf = bytes.NewBuffer([]byte{})
+	g.players[Aft].buf = bytes.NewBuffer([]byte{})
+	g.players[Fore].endTime = -1
+	g.players[Aft].endTime = -1
+}
+
 func GoodBadLeft(objective string, attempt string) playState {
 	good := bytes.Buffer{}
 	bad := bytes.Buffer{}
