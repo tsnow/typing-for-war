@@ -343,14 +343,33 @@ func (g *game) tick() {
 		g.clock = g.clock - 1
 		g.broadcast()
 	} else if g.clock == -1 { // time to start
-		g.clock = 10
+		v, _ := g.gameSettings()
+		g.clock = v.clock
 		g.broadcast()
 	} else { // countdown to start
 		g.clock = g.clock + 1
 		g.broadcast()
 	}
 }
+
+func (g *game) gameSettings() (game, game){
+	var o game
+	z := len(gameSettings) - 1
+	v := len(gameSettings)
+	for i, h := range gameSettings {
+		if g.objective == h.objective {
+			o = h
+			v = i + 1
+		}
+	}
+	if v >= z {
+		return o, gameSettings[0]
+	}
+	return o, gameSettings[v]
+}
 func (g *game) resetGame(){
+	_, z := g.gameSettings()
+	g.objective = z.objective
 	g.clock = -10
 	g.players[Fore].buf = bytes.NewBuffer([]byte{})
 	g.players[Aft].buf = bytes.NewBuffer([]byte{})
@@ -442,6 +461,28 @@ func initBufferServer() {
 			mutex.Unlock()
 		}
 	}()
+}
+var gameSettings []game = []game{
+	game{
+		objective: "CRY HAVOK AND LET SLIP THE DOGS OF WAR",
+		clock: 10,
+	},
+	game{
+		objective: "FLORETED CHOREA ANAGRAMMATICALLY LOCULATION REPREDICT",
+		clock: 15,
+	},
+	game{
+		objective: "TEH",
+		clock: 2,
+	},
+	game{
+		objective: "WINRAR",
+		clock: 3,
+	},
+	game{
+		objective: "CRY HAVOK N LET SLIP THE GODS OF WART",
+		clock: 5,
+	},
 }
 func releaseBufferServer() {
 }
