@@ -44,9 +44,12 @@
             
         },
         "playDisplay": function(playState){
-            return '<span class="playCorrect">'+playState[0]+'</span>'+
+            if(playState.join("") === ""){
+                return "Loading...";
+            }
+            return '[<span class="playCorrect">'+playState[0]+'</span>'+
                 '<span class="playWrong">'+playState[1]+'</span>'+
-                '<span class="playLeft">'+playState[2]+'</span>';
+                '<span class="playLeft">'+playState[2]+'</span>]';
         },
         "onGameStateUpdate": function(msg){
             var that = this;
@@ -58,13 +61,16 @@
                 return;
             }
             that.tickerData = '';
-            that.tickerData = that.tickerData + '<div class="event">Opponent: ['+that.playDisplay(gameState.OpponentPlay)+']</div>';
-	    that.tickerData = that.tickerData + '<hr />';
-            that.tickerData = that.tickerData + '<div class="warning">Game State: '+gameState.Status+' - '+gameState.Clock+' - Points: '+gameState.Points+'</div>';
-	    that.tickerData = that.tickerData + '<hr />';
+            that.tickerData = that.tickerData + '<div class="event">Opponent: '+that.playDisplay(gameState.OpponentPlay)+'</div>';
+            that.tickerData = that.tickerData + '<hr />';
+            that.tickerData = that.tickerData + '<div class="warning">Game State: '+gameState.Status+'</div>';
+            that.tickerData = that.tickerData + '<div class="warning">Countdown: '+gameState.Clock+'</div>';
+            that.tickerData = that.tickerData + '<div class="warning"> Points: '+gameState.Points+'</div>';
+            
+            that.tickerData = that.tickerData + '<hr />';
             //that.tickerData = that.tickerData + '<div class="warning">Objective: '+gameState.Objective+'</p>';
 
-            that.tickerData = that.tickerData + '<div class="message">CHALLENGE: ['+that.playDisplay(gameState.MyPlay)+']</div>';
+            that.tickerData = that.tickerData + '<div class="message">CHALLENGE: '+that.playDisplay(gameState.MyPlay)+'</div>';
             that.ticker();
         },
         "connect": function(){
