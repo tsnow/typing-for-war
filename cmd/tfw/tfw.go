@@ -483,6 +483,10 @@ var gameSettings []game = []game{
 		objective: "CRY HAVOK N LET SLIP THE GODS OF WART",
 		clock: 5,
 	},
+	game{
+		objective: "WHY AM I UNREACHABLE????",
+		clock: 5,
+	},
 }
 func releaseBufferServer() {
 }
@@ -497,7 +501,7 @@ func main() {
 
 	http.Handle(gameRootPath(), ws.Handler(bufferServer))
 
-	fmt.Println("listening...", os.Getenv("PORT")) // Must be 5002 to work with frontend.
+	fmt.Println("listening...", os.Getenv("PORT")) 
 	err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	if err != nil {
 		panic(err)
