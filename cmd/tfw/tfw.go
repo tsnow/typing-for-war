@@ -216,6 +216,7 @@ func (g *game) receive(p *player) {
 		}
 		p.logGot(message)
 		g.integrate(p, message)
+		g.broadcast()
 	}
 }
 func (g *game) integrate(p *player, kp keypress) {
@@ -233,7 +234,6 @@ func (g *game) integrate(p *player, kp keypress) {
 	if p.endTime < 0 && completedGame(g.objective, p.buf.String()) {
 		g.distributePoints(p)
 	}
-	g.broadcast()
 }
 func (g *game) interpret(p *player, kp keypress) {
 	if kp.Name != "down" {
