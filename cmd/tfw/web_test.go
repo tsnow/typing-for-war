@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	ws "code.google.com/p/go.net/websocket"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -64,7 +65,7 @@ func TestGameDoesntExist(t *testing.T) {
 	if conn1 == nil {
 		return
 	}
-	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\"}")
+	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":0,\"Points\":0}")
 	verifyReceive(t, g, conn1, h)
 	conn1.Close()
 	releaseBufferServer()
@@ -87,7 +88,7 @@ func TestGameFull(t *testing.T) {
 	if conn3 == nil {
 		return
 	}
-	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\"}")
+	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":0,\"Points\":0}")
 	verifyReceive(t, g, conn3, h)
 	conn1.Close()
 	conn2.Close()
@@ -95,43 +96,39 @@ func TestGameFull(t *testing.T) {
 	releaseBufferServer()
 }
 
+func verifyGameState(t *testing.T, msg []byte, g *game, pos position){
+	actual_msg, err := json.Marshal(g.gameState(g.players[pos]))
+	if err != nil {
+		t.Errorf("Read: %s %v", g.gid, err)
+	}
+	if !bytes.Equal(msg, actual_msg) {
+		t.Errorf("Echo: %s expected \n%q\n got \n%q", g.gid, msg, actual_msg)
+	}
+}
 func TestGameBackspace(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
-	g := "backspace"
-	createGame(g, "HO")
-	conn1 := createClient(t, buildGamePath(g))
-	if conn1 == nil {
-		return
-	}
-	conn2 := createClient(t, buildGamePath(g))
-	if conn2 == nil {
-		return
-	}
-
+	g := newGame("backspace", "HO")
+	g.objective = "HO"
+	var v ws.Conn
+	g.players[Fore].sock = &v
+	g.players[Aft].sock = &v
 	bkspmsg := []byte("{\"Name\":\"down\",\"KeyRune\":8}")
 	hmsg := []byte("{\"Name\":\"down\",\"KeyRune\":72}")
 	imsg := []byte("{\"Name\":\"down\",\"KeyRune\":73}")
-	h := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\"}")
-	hi := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"I\",\"O\"],\"Objective\":\"HO\"}")
-	if _, err := conn1.Write(hmsg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-
-	verifyReceive(t, g, conn1, h)
-
-	if _, err := conn1.Write(imsg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-	verifyReceive(t, g, conn1, hi)
-
-	if _, err := conn1.Write(bkspmsg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-	verifyReceive(t, g, conn1, h)
-	conn1.Close()
-	conn2.Close()
-	releaseBufferServer()
+	var h,i,bksp keypress 
+	json.Unmarshal(hmsg, &h)
+	json.Unmarshal(imsg, &i)
+	json.Unmarshal(bkspmsg, &bksp)
+	g.clock = 10
+	g.integrate(g.players[Fore], h)
+	
+	verifyGameState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	g.integrate(g.players[Fore], i)
+	verifyGameState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"I\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	g.integrate(g.players[Fore], bksp)
+	verifyGameState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	
 }
 
 /*
