@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	ws "code.google.com/p/go.net/websocket"
+	ws "golang.org/x/net/websocket"
 	"encoding/json"
 	"fmt"
 	"log"
