@@ -130,6 +130,47 @@ func TestGameBackspace(t *testing.T) {
 	verifyGameState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
 	
 }
+func TestGameCountdown(t *testing.T) {
+	once.Do(startServer)
+	initBufferServer()
+	g := newGame("countdown", "HO")
+	oldsettings := gameSettings
+	gameSettings = []game{
+		game{
+			objective: "HO",
+			clock: 10,
+		},
+		game{
+			objective: "OH",
+			clock: 15,
+		},
+	}
+	defer func(){
+		gameSettings = oldsettings
+	}()
+	g.objective = "HO"
+	var v ws.Conn
+	g.players[Fore].sock = &v
+	g.players[Aft].sock = &v
+	g.clock = -10
+	g.goClock()
+	verifyGameState(t,[]byte("{\"Status\":\"game_starting\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":-9,\"Points\":0}"), g, Fore)
+
+	g.clock = -1
+	g.goClock()
+	if g.clock == 0 {
+		t.Error("clock should have reset")
+	}
+	g.clock = 15
+	g.goClock()
+	verifyGameState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":14,\"Points\":0}"), g, Fore)
+	g.clock = 1
+	g.goClock()
+	g.clock = 0
+
+	g.objective = "HO"
+	verifyGameState(t,[]byte("{\"Status\":\"game_over\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":0,\"Points\":1}"), g, Fore) // I dont know where the 1 comes from.
+}
 
 /*
 func TestGameReconnectConn(t *testing.T) {

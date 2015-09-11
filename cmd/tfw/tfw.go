@@ -322,12 +322,12 @@ func completedGame(objective string, attempt string) bool {
 	}
 	return false
 }
-func (g *game) tick() {
+func (g *game) goClock() bool{
 	if !g.gameFull() {
-		return // pause
+		return true // pause
 	}
 	if g.clock == 0 { //not gaming
-		return //Shouldn't be reachable
+		return true //Shouldn't be reachable
 	} else if g.clock == 1 { //game done
 		fore := g.players[Fore]
 		if fore.endTime < 0 {
@@ -338,18 +338,24 @@ func (g *game) tick() {
 			g.distributePoints(aft)
 		}
 		g.resetGame()
-		g.broadcast()
+		return false
 	} else if g.clock > 0 {
 		g.clock = g.clock - 1
-		g.broadcast()
+		return false
 	} else if g.clock == -1 { // time to start
 		v, _ := g.gameSettings()
 		g.clock = v.clock
-		g.broadcast()
+		return false
 	} else { // countdown to start
 		g.clock = g.clock + 1
-		g.broadcast()
+		return false
 	}
+}
+func (g *game) tick() {
+	if g.goClock() {
+		return
+	}
+	g.broadcast()
 }
 
 func (g *game) gameSettings() (game, game){
