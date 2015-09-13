@@ -55,7 +55,7 @@ type position string
 const Fore position = "fore"
 const Aft position = "aft"
 
-type game struct {
+type gameMatch struct {
 	players   map[position]*player
 	gid       gameID
 	objective string // TODO: Create objective struct and implement and test operations against it. (compare, partition_play{correct,wrong,left}, completed, list_of_errors.)
@@ -88,8 +88,8 @@ func (p *player) logPut(msg interface{}) {
 	log.Printf("- game %s - %s -> \"%s\"", p.g.gid, p.id(), msg)
 }
 
-func newGame(gid gameID, objective string) *game {
-	g := game{
+func newGameMatch(gid gameID, objective string) *gameMatch {
+	g := gameMatch{
 		players:   make(map[position]*player),
 		gid:       gid,
 		objective: objective,
@@ -106,23 +106,23 @@ func newGame(gid gameID, objective string) *game {
 		g:       &g,
 	}
 	g.players[Aft] = &aft
-	g.resetGame()
+	g.resetGameMatch()
 	return &g
 }
-func (g *game) fore() *player {
+func (g *gameMatch) fore() *player {
 	return g.players[Fore]
 }
-func (g *game) aft() *player {
+func (g *gameMatch) aft() *player {
 	return g.players[Aft]
 }
-func (g *game) gameFull() bool {
+func (g *gameMatch) gameMatchFull() bool {
 	return !(g.players[Fore].sock == nil) &&
 		!(g.players[Aft].sock == nil)
 }
 func (v visitor) reject() {
 	v.logConnect()
 	v.logNoGameAvailable()
-	err := ws.JSON.Send(v.sock, gameState{
+	err := ws.JSON.Send(v.sock, gameMatchState{
 		Status: NoGameAvailable,
 	})
 	if err != nil {
@@ -137,16 +137,16 @@ type player struct {
 	sock    *ws.Conn
 	pos     position
 	buf     *bytes.Buffer
-	g       *game
+	g       *gameMatch
 	points  int
 	endTime int
 	playerName string
 }
 
-func (g *game) getPlayer(pos position) *player {
+func (g *gameMatch) getPlayer(pos position) *player {
 	return g.players[pos]
 }
-func (g *game) otherPlayer(pos position) *player {
+func (g *gameMatch) otherPlayer(pos position) *player {
 	var out position
 	if pos == Fore {
 		out = Aft
@@ -155,8 +155,8 @@ func (g *game) otherPlayer(pos position) *player {
 	}
 	return g.getPlayer(out)
 }
-func (g *game) register(sock *ws.Conn) {
-	if g.gameFull() {
+func (g *gameMatch) register(sock *ws.Conn) {
+	if g.gameMatchFull() {
 		visitor{sock}.reject()
 		return
 	}
@@ -190,7 +190,7 @@ const GameLost status = "game_lost"
 
 type playState [3]string
 
-type gameState struct {
+type gameMatchState struct {
 	Status       status
 	OpponentPlay playState
 	MyPlay       playState
@@ -199,7 +199,7 @@ type gameState struct {
 	Points       int
 }
 
-func (g *game) receive(p *player) {
+func (g *gameMatch) receive(p *player) {
 	p.logConnect()
 
 	var message keypress
@@ -219,23 +219,23 @@ func (g *game) receive(p *player) {
 		g.broadcast()
 	}
 }
-func (g *game) integrate(p *player, kp keypress) {
-	state := g.gameStatus(p)
+func (g *gameMatch) integrate(p *player, kp keypress) {
+	state := g.gameMatchStatus(p)
 	if state != Gaming {
 		return
 	}
-	if completedGame(g.objective, p.buf.String()) {
+	if completedGameMatch(g.objective, p.buf.String()) {
 		// here there be attacks
 		o := g.otherPlayer(p.pos)
 		g.interpret(o, kp)
 	} else {
 		g.interpret(p, kp)
 	}
-	if p.endTime < 0 && completedGame(g.objective, p.buf.String()) {
+	if p.endTime < 0 && completedGameMatch(g.objective, p.buf.String()) {
 		g.distributePoints(p)
 	}
 }
-func (g *game) interpret(p *player, kp keypress) {
+func (g *gameMatch) interpret(p *player, kp keypress) {
 	if kp.Name != "down" {
 		return
 	}
@@ -257,7 +257,7 @@ func (g *game) interpret(p *player, kp keypress) {
 func (p *player) onClose() {
 	p.sock = nil
 }
-func (g *game) gameStatus(p *player) status {
+func (g *gameMatch) gameMatchStatus(p *player) status {
 	o := g.otherPlayer(p.pos)
 	var state status
 	if p.endTime >= 0 && o.endTime >= 0 {
@@ -268,29 +268,30 @@ func (g *game) gameStatus(p *player) status {
 		}
 		return state
 	}
-	if g.gameFull() && g.clock < 0 {
+
+	if g.gameMatchFull() && g.clock < 0 {
 		state = GameStarting
-	} else if g.gameFull() && g.clock > 0 {
+	} else if g.gameMatchFull() && g.clock > 0 {
 		state = Gaming
-	} else if g.gameFull() && g.clock == 0 {
+	} else if g.gameMatchFull() && g.clock == 0 {
 		state = GameOver
 	} else {
 		state = WaitingForOpponent
 	}
 	return state
 }
-func (g *game) gameState(p *player) gameState {
+func (g *gameMatch) gameMatchState(p *player) gameMatchState {
 	o := g.otherPlayer(p.pos)
-	state := g.gameStatus(p)
+	state := g.gameMatchStatus(p)
 	switch state {
 	case GameStarting, WaitingForOpponent:
-		return gameState{
+		return gameMatchState{
 			Status: state,
 			Clock:        g.clock,
 			Points:       p.points,
 		}
 	}
-	return gameState{
+	return gameMatchState{
 		Status:       state,
 		OpponentPlay: GoodBadLeft(g.objective, o.buf.String()),
 		MyPlay:       GoodBadLeft(g.objective, p.buf.String()),
@@ -299,7 +300,7 @@ func (g *game) gameState(p *player) gameState {
 		Points:       p.points,
 	}
 }
-func (g *game) distributePoints(p *player) {
+func (g *gameMatch) distributePoints(p *player) {
 	p.endTime = g.clock
 	p.points = p.points + calcPoints(g.objective, p.buf.String()) + p.endTime
 }
@@ -313,7 +314,7 @@ func calcPoints(objective string, attempt string) int {
 	}
 	return out
 }
-func completedGame(objective string, attempt string) bool {
+func completedGameMatch(objective string, attempt string) bool {
 	gbl := GoodBadLeft(objective, attempt)
 	bad := gbl[1]
 	left := gbl[2]
@@ -322,13 +323,13 @@ func completedGame(objective string, attempt string) bool {
 	}
 	return false
 }
-func (g *game) goClock() bool{
-	if !g.gameFull() {
+func (g *gameMatch) goClock() bool{
+	if !g.gameMatchFull() {
 		return true // pause
 	}
 	if g.clock == 0 { //not gaming
 		return true //Shouldn't be reachable
-	} else if g.clock == 1 { //game done
+	} else if g.clock == 1 { //gameMatch done
 		fore := g.players[Fore]
 		if fore.endTime < 0 {
 			g.distributePoints(fore)
@@ -337,13 +338,13 @@ func (g *game) goClock() bool{
 		if aft.endTime < 0 {
 			g.distributePoints(aft)
 		}
-		g.resetGame()
+		g.resetGameMatch()
 		return false
 	} else if g.clock > 0 {
 		g.clock = g.clock - 1
 		return false
 	} else if g.clock == -1 { // time to start
-		v, _ := g.gameSettings()
+		v, _ := g.gameMatchSettings()
 		g.clock = v.clock
 		return false
 	} else { // countdown to start
@@ -351,30 +352,30 @@ func (g *game) goClock() bool{
 		return false
 	}
 }
-func (g *game) tick() {
+func (g *gameMatch) tick() {
 	if g.goClock() {
 		return
 	}
 	g.broadcast()
 }
 
-func (g *game) gameSettings() (game, game){
-	var o game
-	z := len(gameSettings) - 1
-	v := len(gameSettings)
-	for i, h := range gameSettings {
+func (g *gameMatch) gameMatchSettings() (gameMatch, gameMatch){
+	var o gameMatch
+	z := len(gameMatchSettings) - 1
+	v := len(gameMatchSettings)
+	for i, h := range gameMatchSettings {
 		if g.objective == h.objective {
 			o = h
 			v = i + 1
 		}
 	}
 	if v >= z {
-		return o, gameSettings[0]
+		return o, gameMatchSettings[0]
 	}
-	return o, gameSettings[v]
+	return o, gameMatchSettings[v]
 }
-func (g *game) resetGame(){
-	_, z := g.gameSettings()
+func (g *gameMatch) resetGameMatch(){
+	_, z := g.gameMatchSettings()
 	g.objective = z.objective
 	g.clock = -10
 	g.players[Fore].buf = bytes.NewBuffer([]byte{})
@@ -406,13 +407,13 @@ func GoodBadLeft(objective string, attempt string) playState {
 	}
 	return playState{good.String(), bad.String(), left.String()}
 }
-func (g *game) broadcast() {
+func (g *gameMatch) broadcast() {
 	for _, p := range g.players {
 		if p.sock == nil {
 			continue
 		}
 		p.logPut(p.buf.String())
-		err := ws.JSON.Send(p.sock, g.gameState(p))
+		err := ws.JSON.Send(p.sock, g.gameMatchState(p))
 		if err != nil {
 			p.logMessage(err)
 			p.logSendFail()
@@ -434,9 +435,9 @@ func bufferServer(sock *ws.Conn) {
 
 type gameID string
 
-var games map[gameID]*game
+var games map[gameID]*gameMatch
 
-func parseGamePath(url string) *game {
+func parseGamePath(url string) *gameMatch {
 	gid := gameID(strings.TrimPrefix(url, gameRootPath()))
 	return games[gid]
 }
@@ -449,47 +450,47 @@ var mutex = &sync.Mutex{}
 func createGame(name string, objective string) {
 	mutex.Lock()
 	gid := gameID(name)
-	games[gid] = newGame(gid, objective)
+	games[gid] = newGameMatch(gid, objective)
 	mutex.Unlock()
 }
 func gameRootPath() string {
 	return "/game/"
 }
 func initBufferServer() {
-	games = make(map[gameID]*game)
+	games = make(map[gameID]*gameMatch)
 	go func() {
 		c := time.Tick(time.Second)
 		for _ = range c {
 			mutex.Lock()
-			for _, game := range games {
-				game.tick()
+			for _, gameMatch := range games {
+				gameMatch.tick()
 			}
 			mutex.Unlock()
 		}
 	}()
 }
-var gameSettings []game = []game{
-	game{
+var gameMatchSettings []gameMatch = []gameMatch{
+	gameMatch{
 		objective: "CRY HAVOK AND LET SLIP THE DOGS OF WAR",
 		clock: 10,
 	},
-	game{
+	gameMatch{
 		objective: "FLORETED CHOREA ANAGRAMMATICALLY LOCULATION REPREDICT",
 		clock: 15,
 	},
-	game{
+	gameMatch{
 		objective: "TEH",
 		clock: 2,
 	},
-	game{
+	gameMatch{
 		objective: "WINRAR",
 		clock: 3,
 	},
-	game{
+	gameMatch{
 		objective: "CRY HAVOK N LET SLIP THE GODS OF WART",
 		clock: 5,
 	},
-	game{
+	gameMatch{
 		objective: "WHY AM I UNREACHABLE????",
 		clock: 5,
 	},

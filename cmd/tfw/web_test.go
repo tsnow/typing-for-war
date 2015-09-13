@@ -96,8 +96,8 @@ func TestGameFull(t *testing.T) {
 	releaseBufferServer()
 }
 
-func verifyGameState(t *testing.T, msg []byte, g *game, pos position){
-	actual_msg, err := json.Marshal(g.gameState(g.players[pos]))
+func verifyGameMatchState(t *testing.T, msg []byte, g *gameMatch, pos position){
+	actual_msg, err := json.Marshal(g.gameMatchState(g.players[pos]))
 	if err != nil {
 		t.Errorf("Read: %s %v", g.gid, err)
 	}
@@ -108,7 +108,7 @@ func verifyGameState(t *testing.T, msg []byte, g *game, pos position){
 func TestGameBackspace(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
-	g := newGame("backspace", "HO")
+	g := newGameMatch("backspace", "HO")
 	g.objective = "HO"
 	var v ws.Conn
 	g.players[Fore].sock = &v
@@ -123,30 +123,30 @@ func TestGameBackspace(t *testing.T) {
 	g.clock = 10
 	g.integrate(g.players[Fore], h)
 	
-	verifyGameState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
 	g.integrate(g.players[Fore], i)
-	verifyGameState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"I\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"I\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
 	g.integrate(g.players[Fore], bksp)
-	verifyGameState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
 	
 }
 func TestGameCountdown(t *testing.T) {
 	once.Do(startServer)
 	initBufferServer()
-	g := newGame("countdown", "HO")
-	oldsettings := gameSettings
-	gameSettings = []game{
-		game{
+	g := newGameMatch("countdown", "HO")
+	oldsettings := gameMatchSettings
+	gameMatchSettings = []gameMatch{
+		gameMatch{
 			objective: "HO",
 			clock: 10,
 		},
-		game{
+		gameMatch{
 			objective: "OH",
 			clock: 15,
 		},
 	}
 	defer func(){
-		gameSettings = oldsettings
+		gameMatchSettings = oldsettings
 	}()
 	g.objective = "HO"
 	var v ws.Conn
@@ -154,7 +154,7 @@ func TestGameCountdown(t *testing.T) {
 	g.players[Aft].sock = &v
 	g.clock = -10
 	g.goClock()
-	verifyGameState(t,[]byte("{\"Status\":\"game_starting\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":-9,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t,[]byte("{\"Status\":\"game_starting\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":-9,\"Points\":0}"), g, Fore)
 
 	g.clock = -1
 	g.goClock()
@@ -163,13 +163,13 @@ func TestGameCountdown(t *testing.T) {
 	}
 	g.clock = 15
 	g.goClock()
-	verifyGameState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":14,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":14,\"Points\":0}"), g, Fore)
 	g.clock = 1
 	g.goClock()
 	g.clock = 0
 
 	g.objective = "HO"
-	verifyGameState(t,[]byte("{\"Status\":\"game_over\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":0,\"Points\":1}"), g, Fore) // I dont know where the 1 comes from.
+	verifyGameMatchState(t,[]byte("{\"Status\":\"game_over\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":0,\"Points\":1}"), g, Fore) // I dont know where the 1 comes from.
 }
 
 /*
@@ -229,9 +229,9 @@ func TestGameReconnectConn(t *testing.T) {
 		t.Errorf("Write: %v", err)
 	}
 	wait1 := []byte("{\"Status\":\"gaming\",\"OpponentPlay\":\"\",\"MyPlay\":\"HI\"}")
-	regame2 := []byte("{\"Status\":\"waiting_for_opponent\",\"OpponentPlay\":\"H\",\"MyPlay\":\"\"}")
+	regameMatch2 := []byte("{\"Status\":\"waiting_for_opponent\",\"OpponentPlay\":\"H\",\"MyPlay\":\"\"}")
 	verifyReceive(t, g, conn1, wait1)
-	verifyReceive(t, g, conn2, regame2)
+	verifyReceive(t, g, conn2, regameMatch2)
 	conn2.Close()
 	conn1.Close()
 	releaseBufferServer()
