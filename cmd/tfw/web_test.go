@@ -2,9 +2,9 @@ package main
 
 import (
 	"bytes"
-	ws "golang.org/x/net/websocket"
 	"encoding/json"
 	"fmt"
+	ws "golang.org/x/net/websocket"
 	"log"
 	"net"
 	"net/http"
@@ -96,7 +96,7 @@ func TestGameFull(t *testing.T) {
 	releaseBufferServer()
 }
 
-func verifyGameMatchState(t *testing.T, msg []byte, g *gameMatch, pos position){
+func verifyGameMatchState(t *testing.T, msg []byte, g *gameMatch, pos position) {
 	actual_msg, err := json.Marshal(g.gameMatchState(g.players[pos]))
 	if err != nil {
 		t.Errorf("Read: %s %v", g.gid, err)
@@ -116,19 +116,19 @@ func TestGameBackspace(t *testing.T) {
 	bkspmsg := []byte("{\"Name\":\"down\",\"KeyRune\":8}")
 	hmsg := []byte("{\"Name\":\"down\",\"KeyRune\":72}")
 	imsg := []byte("{\"Name\":\"down\",\"KeyRune\":73}")
-	var h,i,bksp keypress 
+	var h, i, bksp keypress
 	json.Unmarshal(hmsg, &h)
 	json.Unmarshal(imsg, &i)
 	json.Unmarshal(bkspmsg, &bksp)
 	g.clock = 10
 	g.integrate(g.players[Fore], h)
-	
-	verifyGameMatchState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+
+	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
 	g.integrate(g.players[Fore], i)
-	verifyGameMatchState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"I\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"I\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
 	g.integrate(g.players[Fore], bksp)
-	verifyGameMatchState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
-	
+	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+
 }
 func TestGameCountdown(t *testing.T) {
 	once.Do(startServer)
@@ -138,14 +138,14 @@ func TestGameCountdown(t *testing.T) {
 	gameMatchSettings = []gameMatch{
 		gameMatch{
 			objective: "HO",
-			clock: 10,
+			clock:     10,
 		},
 		gameMatch{
 			objective: "OH",
-			clock: 15,
+			clock:     15,
 		},
 	}
-	defer func(){
+	defer func() {
 		gameMatchSettings = oldsettings
 	}()
 	g.objective = "HO"
@@ -154,7 +154,7 @@ func TestGameCountdown(t *testing.T) {
 	g.players[Aft].sock = &v
 	g.clock = -10
 	g.goClock()
-	verifyGameMatchState(t,[]byte("{\"Status\":\"game_starting\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":-9,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t, []byte("{\"Status\":\"game_starting\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":-9,\"Points\":0}"), g, Fore)
 
 	g.clock = -1
 	g.goClock()
@@ -163,13 +163,13 @@ func TestGameCountdown(t *testing.T) {
 	}
 	g.clock = 15
 	g.goClock()
-	verifyGameMatchState(t,[]byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":14,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":14,\"Points\":0}"), g, Fore)
 	g.clock = 1
 	g.goClock()
 	g.clock = 0
 
 	g.objective = "HO"
-	verifyGameMatchState(t,[]byte("{\"Status\":\"game_over\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":0,\"Points\":1}"), g, Fore) // I dont know where the 1 comes from.
+	verifyGameMatchState(t, []byte("{\"Status\":\"game_over\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":0,\"Points\":1}"), g, Fore) // I dont know where the 1 comes from.
 }
 
 /*

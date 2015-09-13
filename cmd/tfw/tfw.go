@@ -2,8 +2,8 @@ package main
 
 import (
 	"bytes"
-	ws "golang.org/x/net/websocket"
 	"fmt"
+	ws "golang.org/x/net/websocket"
 	//	"github.com/tsnow/typing-for-war/engine"
 	"log"
 	"net/http"
@@ -95,15 +95,15 @@ func newGameMatch(gid gameID, objective string) *gameMatch {
 		objective: objective,
 	}
 	fore := player{
-		pos:     Fore,
-		sock:    nil,
-		g:       &g,
+		pos:  Fore,
+		sock: nil,
+		g:    &g,
 	}
 	g.players[Fore] = &fore
 	aft := player{
-		pos:     Aft,
-		sock:    nil,
-		g:       &g,
+		pos:  Aft,
+		sock: nil,
+		g:    &g,
 	}
 	g.players[Aft] = &aft
 	g.resetGameMatch()
@@ -134,12 +134,12 @@ func (v visitor) reject() {
 }
 
 type player struct {
-	sock    *ws.Conn
-	pos     position
-	buf     *bytes.Buffer
-	g       *gameMatch
-	points  int
-	endTime int
+	sock       *ws.Conn
+	pos        position
+	buf        *bytes.Buffer
+	g          *gameMatch
+	points     int
+	endTime    int
 	playerName string
 }
 
@@ -287,8 +287,8 @@ func (g *gameMatch) gameMatchState(p *player) gameMatchState {
 	case GameStarting, WaitingForOpponent:
 		return gameMatchState{
 			Status: state,
-			Clock:        g.clock,
-			Points:       p.points,
+			Clock:  g.clock,
+			Points: p.points,
 		}
 	}
 	return gameMatchState{
@@ -323,7 +323,7 @@ func completedGameMatch(objective string, attempt string) bool {
 	}
 	return false
 }
-func (g *gameMatch) goClock() bool{
+func (g *gameMatch) goClock() bool {
 	if !g.gameMatchFull() {
 		return true // pause
 	}
@@ -359,7 +359,7 @@ func (g *gameMatch) tick() {
 	g.broadcast()
 }
 
-func (g *gameMatch) gameMatchSettings() (gameMatch, gameMatch){
+func (g *gameMatch) gameMatchSettings() (gameMatch, gameMatch) {
 	var o gameMatch
 	z := len(gameMatchSettings) - 1
 	v := len(gameMatchSettings)
@@ -374,7 +374,7 @@ func (g *gameMatch) gameMatchSettings() (gameMatch, gameMatch){
 	}
 	return o, gameMatchSettings[v]
 }
-func (g *gameMatch) resetGameMatch(){
+func (g *gameMatch) resetGameMatch() {
 	_, z := g.gameMatchSettings()
 	g.objective = z.objective
 	g.clock = -10
@@ -469,32 +469,34 @@ func initBufferServer() {
 		}
 	}()
 }
+
 var gameMatchSettings []gameMatch = []gameMatch{
 	gameMatch{
 		objective: "CRY HAVOK AND LET SLIP THE DOGS OF WAR",
-		clock: 10,
+		clock:     10,
 	},
 	gameMatch{
 		objective: "FLORETED CHOREA ANAGRAMMATICALLY LOCULATION REPREDICT",
-		clock: 15,
+		clock:     15,
 	},
 	gameMatch{
 		objective: "TEH",
-		clock: 2,
+		clock:     2,
 	},
 	gameMatch{
 		objective: "WINRAR",
-		clock: 3,
+		clock:     3,
 	},
 	gameMatch{
 		objective: "CRY HAVOK N LET SLIP THE GODS OF WART",
-		clock: 5,
+		clock:     5,
 	},
 	gameMatch{
 		objective: "WHY AM I UNREACHABLE????",
-		clock: 5,
+		clock:     5,
 	},
 }
+
 func releaseBufferServer() {
 }
 
@@ -508,7 +510,7 @@ func main() {
 
 	http.Handle(gameRootPath(), ws.Handler(bufferServer))
 
-	fmt.Println("listening...", os.Getenv("PORT")) 
+	fmt.Println("listening...", os.Getenv("PORT"))
 	err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	if err != nil {
 		panic(err)

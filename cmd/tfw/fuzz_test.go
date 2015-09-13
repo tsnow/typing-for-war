@@ -9,35 +9,36 @@ import "testing"
 
 type testAttempt struct {
 	Objective string
-	Attempt string
+	Attempt   string
 }
-func testfile(dir string, name string) string{
+
+func testfile(dir string, name string) string {
 	wd, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
 	return filepath.Join(wd, dir, name)
 }
-func StoreTestCase(name string, obj string, attempt string){
+func StoreTestCase(name string, obj string, attempt string) {
 	out, err := json.Marshal(testAttempt{
 		Objective: obj,
-		Attempt: attempt,
+		Attempt:   attempt,
 	})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println( testfile("corpus", name))
+	fmt.Println(testfile("corpus", name))
 	ioutil.WriteFile(testfile("corpus", name), out, 0777)
-	out, err = json.Marshal(GoodBadLeft(obj,attempt))
+	out, err = json.Marshal(GoodBadLeft(obj, attempt))
 	if err != nil {
 		panic(err)
 	}
 
-	ioutil.WriteFile(testfile("expected", name),out,0777)
+	ioutil.WriteFile(testfile("expected", name), out, 0777)
 }
 
 func LoadTestCase(name string) (testAttempt, *playState) {
-	buf, err := ioutil.ReadFile(testfile("corpus",name))
+	buf, err := ioutil.ReadFile(testfile("corpus", name))
 	if err != nil {
 		panic(err)
 	}
@@ -48,13 +49,14 @@ func LoadTestCase(name string) (testAttempt, *playState) {
 	}
 	buf, err = ioutil.ReadFile(testfile("expected", name))
 	if err != nil {
-		fmt.Printf("error=\"%s\" filename=\"%s\"",err,testfile("expected",name))
+		fmt.Printf("error=\"%s\" filename=\"%s\"", err, testfile("expected", name))
 		return attempt, nil
 	}
 	var playState playState
 	err = json.Unmarshal(buf, &playState)
 	return attempt, &playState
 }
+
 /*
 func TestMakeTests(t *testing.T){
 	StoreTestCase("0_empty","", "")
@@ -94,37 +96,37 @@ func TestGoodBadLeft(t *testing.T) {
 		}
 	}
 	var msg, actual_msg playState
-	msg = playState{"","",""}
+	msg = playState{"", "", ""}
 	actual_msg = GoodBadLeft("", "")
 	if msg != actual_msg {
-		
+
 	}
-	msg = playState{"","1",""}
+	msg = playState{"", "1", ""}
 	actual_msg = GoodBadLeft("", "1")
 	if msg != actual_msg {
 		t.Errorf("GoodBadLeft ',1': expected %q got %q", msg, actual_msg)
 	}
-	msg = playState{"","","1"}
+	msg = playState{"", "", "1"}
 	actual_msg = GoodBadLeft("1", "")
 	if msg != actual_msg {
 		t.Errorf("GoodBadLeft '1,': expected %q got %q", msg, actual_msg)
 	}
-	msg = playState{"1","",""}
+	msg = playState{"1", "", ""}
 	actual_msg = GoodBadLeft("1", "1")
 	if msg != actual_msg {
 		t.Errorf("GoodBadLeft '1,1': expected %q got %q", msg, actual_msg)
 	}
-	msg = playState{"","2","1"}
+	msg = playState{"", "2", "1"}
 	actual_msg = GoodBadLeft("1", "2")
 	if msg != actual_msg {
 		t.Errorf("GoodBadLeft '1,2': expected %q got %q", msg, actual_msg)
 	}
-	msg = playState{"1","","2"}
+	msg = playState{"1", "", "2"}
 	actual_msg = GoodBadLeft("12", "1")
 	if msg != actual_msg {
 		t.Errorf("GoodBadLeft '12,1': expected %q got %q", msg, actual_msg)
 	}
-	msg = playState{"bobwehadababy","ts","itsaboy"}
+	msg = playState{"bobwehadababy", "ts", "itsaboy"}
 	actual_msg = GoodBadLeft("bobwehadababyitsaboy", "bobwehadababyts")
 	if msg != actual_msg {
 		t.Errorf("GoodBadLeft 'bobwehadababyitsaboy,bobwehadababyts': expected %q got %q", msg, actual_msg)

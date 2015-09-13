@@ -37,7 +37,7 @@ func split(data []byte) (nope, string, string) {
 	return nope, string(data[:dlen]), string(data[dlen:])
 }
 
-func printCorp(filename string){
+func printCorp(filename string) {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -47,9 +47,9 @@ func printCorp(filename string){
 		return
 	}
 	testname := strings.Replace(filename, "corpus/", "", -1)
-	testname = strings.Replace(testname, "-", "_",-1)
+	testname = strings.Replace(testname, "-", "_", -1)
 	fmt.Printf("func TestFuzz%s(t *testing.T){\n    gbl := tfw.GoodBadLeft(%q, %q)\n    t.Error(gbl) \n}", testname, obj, attempt)
-	
+
 }
 func main() {
 	files, err := ioutil.ReadDir("corpus")
