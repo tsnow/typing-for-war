@@ -65,7 +65,7 @@ func TestGameDoesntExist(t *testing.T) {
 	if conn1 == nil {
 		return
 	}
-	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":0,\"Points\":0}")
+	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":0,\"Points\":0,\"Actions\":null}")
 	verifyReceive(t, g, conn1, h)
 	conn1.Close()
 	releaseBufferServer()
@@ -88,7 +88,7 @@ func TestGameFull(t *testing.T) {
 	if conn3 == nil {
 		return
 	}
-	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":0,\"Points\":0}")
+	h := []byte("{\"Status\":\"no_games_available\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":0,\"Points\":0,\"Actions\":null}")
 	verifyReceive(t, g, conn3, h)
 	conn1.Close()
 	conn2.Close()
@@ -123,11 +123,11 @@ func TestGameBackspace(t *testing.T) {
 	g.clock = 10
 	g.integrate(g.players[Fore], h)
 
-	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0,\"Actions\":[\"charplayed\"]}"), g, Fore)
 	g.integrate(g.players[Fore], i)
-	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"I\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"I\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0,\"Actions\":[\"charplayed\"]}"), g, Fore)
 	g.integrate(g.players[Fore], bksp)
-	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"H\",\"\",\"O\"],\"Objective\":\"HO\",\"Clock\":10,\"Points\":0,\"Actions\":[\"charplayed\"]}"), g, Fore)
 
 }
 func TestGameCountdown(t *testing.T) {
@@ -154,7 +154,7 @@ func TestGameCountdown(t *testing.T) {
 	g.players[Aft].sock = &v
 	g.clock = -10
 	g.goClock()
-	verifyGameMatchState(t, []byte("{\"Status\":\"game_starting\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":-9,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t, []byte("{\"Status\":\"game_starting\",\"OpponentPlay\":[\"\",\"\",\"\"],\"MyPlay\":[\"\",\"\",\"\"],\"Objective\":\"\",\"Clock\":-9,\"Points\":0,\"Actions\":[\"countdown\"]}"), g, Fore)
 
 	g.clock = -1
 	g.goClock()
@@ -163,13 +163,19 @@ func TestGameCountdown(t *testing.T) {
 	}
 	g.clock = 15
 	g.goClock()
-	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":14,\"Points\":0}"), g, Fore)
+	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":14,\"Points\":0,\"Actions\":[\"timepassing\"]}"), g, Fore)
+	g.clock = 6
+	g.goClock()
+	g.clock = 5
+
+	g.objective = "HO"
+	verifyGameMatchState(t, []byte("{\"Status\":\"gaming\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":5,\"Points\":0,\"Actions\":[\"timerunningout\"]}"), g, Fore) // I dont know where the 1 comes from.
 	g.clock = 1
 	g.goClock()
 	g.clock = 0
 
 	g.objective = "HO"
-	verifyGameMatchState(t, []byte("{\"Status\":\"game_over\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":0,\"Points\":1}"), g, Fore) // I dont know where the 1 comes from.
+	verifyGameMatchState(t, []byte("{\"Status\":\"game_over\",\"OpponentPlay\":[\"\",\"\",\"HO\"],\"MyPlay\":[\"\",\"\",\"HO\"],\"Objective\":\"HO\",\"Clock\":0,\"Points\":1,\"Actions\":[\"gamelose\"]}"), g, Fore) // I dont know where the 1 comes from.
 }
 
 /*
