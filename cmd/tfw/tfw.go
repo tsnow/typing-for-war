@@ -141,6 +141,7 @@ type player struct {
 	points     int
 	endTime    int
 	playerName string
+	event      string
 }
 
 func (g *gameMatch) getPlayer(pos position) *player {
@@ -197,11 +198,14 @@ type gameMatchState struct {
 	Objective    string
 	Clock        int
 	Points       int
+	Actions      []string
 }
 
 func (g *gameMatch) receive(p *player) {
 	p.logConnect()
-
+	g.players[Fore].event = "memberlogin"
+	g.players[Aft].event = "memberlogin"
+	g.broadcast()
 	var message keypress
 	for {
 		err := ws.JSON.Receive(p.sock, &message)
@@ -211,6 +215,8 @@ func (g *gameMatch) receive(p *player) {
 			p.sock.Close()
 			p.logDisconnected()
 			p.onClose()
+			g.players[Fore].event = "memberlogoff"
+			g.players[Aft].event = "memberlogoff"
 			g.broadcast()
 			break
 		}
@@ -227,12 +233,16 @@ func (g *gameMatch) integrate(p *player, kp keypress) {
 	if completedGameMatch(g.objective, p.buf.String()) {
 		// here there be attacks
 		o := g.otherPlayer(p.pos)
+		o.event = "playerattack"
+		p.event = "playerattack"
 		g.interpret(o, kp)
 	} else {
+		p.event = "charplayed"
 		g.interpret(p, kp)
 	}
 	if p.endTime < 0 && completedGameMatch(g.objective, p.buf.String()) {
 		g.distributePoints(p)
+		p.event = "gamecomplete"
 	}
 }
 func (g *gameMatch) interpret(p *player, kp keypress) {
@@ -286,9 +296,10 @@ func (g *gameMatch) gameMatchState(p *player) gameMatchState {
 	switch state {
 	case GameStarting, WaitingForOpponent:
 		return gameMatchState{
-			Status: state,
-			Clock:  g.clock,
-			Points: p.points,
+			Status:  state,
+			Clock:   g.clock,
+			Points:  p.points,
+			Actions: []string{p.event},
 		}
 	}
 	return gameMatchState{
@@ -298,6 +309,7 @@ func (g *gameMatch) gameMatchState(p *player) gameMatchState {
 		Objective:    g.objective,
 		Clock:        g.clock,
 		Points:       p.points,
+		Actions:      []string{p.event},
 	}
 }
 func (g *gameMatch) distributePoints(p *player) {
@@ -338,17 +350,35 @@ func (g *gameMatch) goClock() bool {
 		if aft.endTime < 0 {
 			g.distributePoints(aft)
 		}
+		if fore.points > aft.points {
+			fore.event = "gamewin"
+			aft.event = "gamelose"
+		} else {
+			fore.event = "gamelose"
+			aft.event = "gamewin"
+		}
 		g.resetGameMatch()
 		return false
 	} else if g.clock > 0 {
 		g.clock = g.clock - 1
+		if g.clock <= 5 {
+			g.players[Fore].event = "timerunningout"
+			g.players[Aft].event = "timerunningout"
+		} else {
+			g.players[Fore].event = "timepassing"
+			g.players[Aft].event = "timepassing"
+		}
 		return false
 	} else if g.clock == -1 { // time to start
 		v, _ := g.gameMatchSettings()
 		g.clock = v.clock
+		g.players[Fore].event = "gamestart"
+		g.players[Aft].event = "gamestart"
 		return false
 	} else { // countdown to start
 		g.clock = g.clock + 1
+		g.players[Fore].event = "countdown"
+		g.players[Aft].event = "countdown"
 		return false
 	}
 }
@@ -419,9 +449,13 @@ func (g *gameMatch) broadcast() {
 			p.logSendFail()
 			p.sock.Close()
 			p.logDisconnected()
+			g.players[Fore].event = "memberlogoff"
+			g.players[Aft].event = "memberlogoff"
 			p.onClose()
 		}
 	}
+	g.players[Fore].event = ""
+	g.players[Aft].event = ""
 }
 func bufferServer(sock *ws.Conn) {
 	log.Printf("%s %s", sock.Request().Method, sock.Request().URL.Path)
@@ -489,7 +523,7 @@ var gameMatchSettings []gameMatch = []gameMatch{
 	},
 	gameMatch{
 		objective: "CRY HAVOK N LET SLIP THE GODS OF WART",
-		clock:     5,
+		clock:     25,
 	},
 	gameMatch{
 		objective: "WHY AM I UNREACHABLE????",
