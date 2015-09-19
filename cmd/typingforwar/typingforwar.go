@@ -21,7 +21,6 @@ func init() {
 	log.Println("starting typing-for-war...")
 }
 
-
 type gameMatchState struct {
 	Status       string
 	OpponentPlay [3]string
@@ -119,34 +118,34 @@ func main() {
 		for {
 			if err = websocket.JSON.Receive(ws, &msg); err != nil {
 				msg.Status = "disconnected"
-				d.Text = fmt.Sprintf("%v",err)
+				d.Text = fmt.Sprintf("%v", err)
 				draw(msg)
-				break;
+				break
 			}
 			m <- msg
 		}
 	}()
 
-	keyPressed := func(e ui.Event) keypress{
+	keyPressed := func(e ui.Event) keypress {
 		if e.Key == ui.KeyBackspace2 {
 			return keypress{
-				Name: "down",
-				KeyRune: rune(8),
+				Name:     "down",
+				KeyRune:  rune(8),
 				CharRune: rune(8),
 			}
 
 		}
 		if e.Key == ui.KeySpace {
 			return keypress{
-				Name: "down",
-				KeyRune: rune(0x20),
+				Name:     "down",
+				KeyRune:  rune(0x20),
 				CharRune: rune(0x20),
 			}
 
 		}
 		return keypress{
-			Name: "down",
-			KeyRune: e.Ch,
+			Name:     "down",
+			KeyRune:  e.Ch,
 			CharRune: e.Ch,
 		}
 	}
@@ -155,7 +154,7 @@ func main() {
 		case e := <-evt:
 			d.Text = fmt.Sprintf("%v", e)
 			if e.Type == ui.EventKey {
-				if err := websocket.JSON.Send(ws,keyPressed(e)); err != nil {
+				if err := websocket.JSON.Send(ws, keyPressed(e)); err != nil {
 					log.Fatal(err)
 				}
 			}
