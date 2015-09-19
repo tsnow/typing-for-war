@@ -3,16 +3,18 @@ package main
 import (
 	ui "github.com/gizak/termui"
 	//	"bytes"
+	"crypto/tls"
 	"fmt"
 	websocket "golang.org/x/net/websocket"
 	//	"github.com/tsnow/typing-for-war/engine"
 	"log"
 	//	"net/http"
-	//	"os"
+	"os"
 	//	"strconv"
 	//	"strings"
 	//	"sync"
 	//	"time"
+	"net/url"
 )
 
 func init() {
@@ -46,10 +48,42 @@ func createPar(name string, value string, y int) *ui.Par {
 	p.Border.FgColor = ui.ColorCyan
 	return p
 }
+
 func main() {
-	origin := "http://localhost:5002/"
-	url := "ws://localhost:5002/game/sparklemotion"
-	ws, err := websocket.Dial(url, "", origin)
+	log.Println(os.Args)
+
+	origin := "https://typingforwar.rocketchampion.com/"
+	gameserver := "wss://typingforwar.rocketchampion.com/game/sparklemotion"
+
+	if len(os.Args) > 1 {
+		u, err := url.Parse(os.Args[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		v, err := url.Parse(os.Args[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		if u.Scheme == "http" {
+			v.Scheme = "ws"
+		} else {
+			v.Scheme = "wss"
+		}
+		v.Path = "/game/sparklemotion"
+		origin = u.String()
+		gameserver = v.String()
+	}
+
+	wscfg, err := websocket.NewConfig(gameserver, origin)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if os.Getenv("TLS_INSECURE") == "true" {
+		tlscfg := tls.Config{InsecureSkipVerify: true}
+		wscfg.TlsConfig = &tlscfg
+	}
+
+	ws, err := websocket.DialConfig(wscfg)
 	if err != nil {
 		log.Fatal(err)
 	}

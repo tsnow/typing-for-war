@@ -176,7 +176,7 @@ var sfx = jsfx.Sounds(library);
 $(document).ready(function(){
 
     var wshost = window.location.host;
-    var ws =  'ws://' + wshost + '/game/sparklemotion';
+    var ws =  'ws'+(window.location.protocol === "https:" ? "s" : "" )+'://' + wshost + '/game/sparklemotion';
     // var host = "ws://typing-for-war.herokuapp.com/game/sparklemotion";
     // var host = "ws://phaedo.local:5002/game/sparklemotion";
     // var host = "ws://localhost:5002/game/sparklemotion"; 
