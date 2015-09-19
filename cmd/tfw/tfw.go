@@ -526,6 +526,10 @@ var gameMatchSettings []gameMatch = []gameMatch{
 		clock:     25,
 	},
 	gameMatch{
+		objective: "To the last, I will grapple with thee... from Hell's heart, I stab at thee! For hate's sake, I spit my last breath at thee!",
+		clock:     60,
+	},
+	gameMatch{
 		objective: "WHY AM I UNREACHABLE????",
 		clock:     5,
 	},
