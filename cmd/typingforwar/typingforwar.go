@@ -19,6 +19,7 @@ func init() {
 	log.Println("starting typing-for-war...")
 }
 
+
 type gameMatchState struct {
 	Status       string
 	OpponentPlay [3]string
@@ -38,7 +39,7 @@ type keypress struct {
 func createPar(name string, value string, y int) *ui.Par {
 	p := ui.NewPar(value)
 	p.Height = 3
-	p.Width = 50
+	p.Width = 80
 	p.Y = y
 	p.TextFgColor = ui.ColorWhite
 	p.Border.Label = name
@@ -52,21 +53,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if _, err := ws.Write([]byte("hello, world!\n")); err != nil {
-		log.Fatal(err)
-	}
-	var m = make(chan gameMatchState)
-
-	go func() {
-		var msg = gameMatchState{}
-		for {
-			if err = websocket.JSON.Receive(ws, &msg); err != nil {
-				log.Fatal(err)
-			}
-			m <- msg
-		}
-	}()
-
 	err = ui.Init()
 	if err != nil {
 		panic(err)
@@ -74,48 +60,77 @@ func main() {
 	defer ui.Close()
 	ui.UseTheme("helloworld")
 	s := createPar("Status", "", 0)
-	i := createPar("Instructions", ":PRESS q TO QUIT DEMO", 2)
+	i := createPar("Instructions", ":PRESS ESC TO QUIT", 2)
 	c := createPar("Challenge", "", 4)
 	o := createPar("Opponent", "", 6)
 	w := createPar("Clock", "", 8)
 	p := createPar("Points", "", 10)
 	a := createPar("Actions", "", 12)
+	d := createPar("Debug", "", 14)
 	draw := func(msg gameMatchState) {
 		s.Text = msg.Status
-		c.Text = "[]"
-		o.Text = "[]"
+		c.Text = fmt.Sprintf("%v", msg.MyPlay)
+		o.Text = fmt.Sprintf("%v", msg.OpponentPlay)
 		w.Text = fmt.Sprintf("%v", msg.Clock)
 		p.Text = fmt.Sprintf("%v", msg.Points)
 		a.Text = fmt.Sprintf("%v", msg.Actions)
-		ui.Render(s, i, c, o, w, p, a)
+		ui.Render(s, i, c, o, w, p, a, d)
 	}
 
 	evt := ui.EventCh()
+	var m = make(chan gameMatchState)
 
+	go func() {
+		var msg gameMatchState
+		for {
+			if err = websocket.JSON.Receive(ws, &msg); err != nil {
+				msg.Status = "disconnected"
+				d.Text = fmt.Sprintf("%v",err)
+				draw(msg)
+				break;
+			}
+			m <- msg
+		}
+	}()
+
+	keyPressed := func(e ui.Event) keypress{
+		if e.Key == ui.KeyBackspace2 {
+			return keypress{
+				Name: "down",
+				KeyRune: rune(8),
+				CharRune: rune(8),
+			}
+
+		}
+		if e.Key == ui.KeySpace {
+			return keypress{
+				Name: "down",
+				KeyRune: rune(0x20),
+				CharRune: rune(0x20),
+			}
+
+		}
+		return keypress{
+			Name: "down",
+			KeyRune: e.Ch,
+			CharRune: e.Ch,
+		}
+	}
 	for {
 		select {
 		case e := <-evt:
-			if e.Type == ui.EventKey && e.Ch == 'q' {
+			d.Text = fmt.Sprintf("%v", e)
+			if e.Type == ui.EventKey {
+				if err := websocket.JSON.Send(ws,keyPressed(e)); err != nil {
+					log.Fatal(err)
+				}
+			}
+
+			if e.Type == ui.EventKey && e.Key == ui.KeyEsc {
 				return
 			}
 		case msg := <-m:
 			draw(msg)
 		}
 	}
-	/*
-		ui.Body.AddRows(
-			ui.NewRow(
-				ui.NewCol(6, 0, widget0),
-				ui.NewCol(6, 0, widget1)),
-			ui.NewRow(
-				ui.NewCol(3, 0, widget2),
-				ui.NewCol(3, 0, widget30, widget31, widget32),
-				ui.NewCol(6, 0, widget4)))
-
-		// calculate layout
-		ui.Body.Align()
-
-		ui.Render(ui.Body)
-	*/
-
 }
