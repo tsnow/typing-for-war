@@ -1,0 +1,5 @@
+
+platforms: ["darwin_amd64"]
+signing-key: equinox.key
+app: "app_c3vwByzrMDv"
+token: ""   

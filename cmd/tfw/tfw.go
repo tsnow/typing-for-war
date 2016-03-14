@@ -539,6 +539,10 @@ func releaseBufferServer() {
 }
 
 func main() {
+  if len(os.Args) == 2 && os.Args[1] == "update" {
+	  equinoxUpdate()
+	  return;
+  }	
 	initBufferServer()
 	createGame("sparklemotion", "CRY HAVOK AND LET SLIP THE DOGS OF WAR")
 	http.HandleFunc("/app/index", func(res http.ResponseWriter, req *http.Request) {
